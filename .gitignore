@@ -1,0 +1,7 @@
+dist/
+__pycache__/
+*.pyc
+# Sotuvchining maxfiy fayllari hech qachon repoga tushmasin
+*generator*
+kalit*.json
+*.pem
