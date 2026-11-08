@@ -6,7 +6,7 @@ Kichik va o‘rta o‘quv markazlari uchun boshqaruv tizimi: o‘quvchilar, guru
 
 ## Qanday ishlaydi
 
-- Bitta HTML sahifa, server yo‘q. Ma’lumotlar foydalanuvchining brauzerida saqlanadi (localStorage).
+- Bitta HTML sahifa. Markazning ish ma’lumotlari foydalanuvchining brauzerida saqlanadi (localStorage).
 - Markaz ro‘yxatdan o‘tadi va 14 kun bepul foydalanadi. Keyin sotuvchi obunani admin saytdan uzaytiradi.
 - Markazlar ro‘yxati sotuvchining Google jadvalida (Apps Script server). Dastur har ochilganda va har 10 daqiqada markaz holatini so‘raydi: bloklangan yoki muddati tugagan markaz ishlay olmaydi. Internet kerak.
 - O‘quvchi, to‘lov va boshqa ma’lumotlar serverga yuborilmaydi, markazning o‘z qurilmasida qoladi. Serverga faqat markaz kartasi va umumiy sonlar (o‘quvchi, guruh, xodim soni) boradi.
