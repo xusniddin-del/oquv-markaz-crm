@@ -10,4 +10,6 @@ Birinchi ommaviy versiya.
 - To‘lov: oylik yoki har dars uchun, chegirmalar, qaytarish, chek.
 - O‘quvchilarni CSV/Excel’dan import: guruhlar kun va vaqti bilan avtomatik ochiladi.
 - Zaxira olish va tiklash (JSON), CSV eksport.
-- Faollashtirish kodi raqamli imzo bilan, markaz telefoniga bog‘langan.
+- Markazlar serveri (Google Sheets) va sotuvchi uchun admin sayt: barcha markazlar, bloklash, obunani uzaytirish, markazga xabar, izoh.
+- Dastur har ochilganda va har 10 daqiqada holatni tekshiradi; internet kerak.
+- Bir telefon raqamiga qayta bepul sinov berilmaydi.

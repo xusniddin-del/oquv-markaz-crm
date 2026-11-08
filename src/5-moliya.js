@@ -124,7 +124,7 @@ function xarajatForma() {
 
 /* ---------- 9.4 Sozlamalar ---------- */
 function renderSozlamalar() {
-  const tablar = [["markaz", "Markaz"], ["xodimlar", "Xodimlar"], ["xonalar", "Xonalar"], ["litsenziya", "Litsenziya"], ["malumot", "Ma’lumotlar"]];
+  const tablar = [["markaz", "Markaz"], ["xodimlar", "Xodimlar"], ["xonalar", "Xonalar"], ["litsenziya", "Obuna"], ["malumot", "Ma’lumotlar"]];
   let h = `<div class="chiplar" role="group" aria-label="Sozlamalar bo‘limi">${tablar.map(([k, n]) => `<button class="chip" data-act="soz-tab" data-v="${k}" aria-pressed="${UI.sozTab === k}">${n}</button>`).join("")}</div>`;
   const t = UI.sozTab, mv = Mavzu.ol();
   if (t === "markaz") return h + `<div class="ikki-ustun">
@@ -138,15 +138,14 @@ function renderSozlamalar() {
       <p class="muted sm" style="margin:0">To‘lov muddati: har oyning ${SOZLAMALAR.tolovKuni}-kuni. Oy o‘rtasida qo‘shilganlarga ${SOZLAMALAR.proporsional ? "dars kunlariga qarab qisman" : "to‘liq oy"} hisoblanadi. Bu qoidalar dastur kodidagi SOZLAMALAR’da o‘zgartiriladi.</p></section></div>`;
 
   if (t === "litsenziya") {
-    const L = DB.litsenziya, lh = litsenziyaHolati();
-    return h + `<div class="ikki-ustun"><section class="card forma"><div class="card-h" style="margin:0"><h2>Holat</h2>${lh.tur === "faol" ? `<span class="pill ok">Faol</span>` : lh.tur === "sinov" ? `<span class="pill warn">Bepul sinov</span>` : ""}</div>
+    const L = DB.litsenziya, lh = litsenziyaHolati(), oxirgi = L.tekshirildi ? new Date(L.tekshirildi) : null;
+    return h + `<section class="card forma" style="max-width:640px"><div class="card-h" style="margin:0"><h2>Obuna</h2>${lh.tur === "faol" ? `<span class="pill ok">Faol</span>` : lh.tur === "sinov" ? `<span class="pill warn">Bepul sinov</span>` : lh.tur === "bloklangan" ? `<span class="pill bad">Bloklangan</span>` : ""}</div>
       <div class="kredit"><div><span>Ro‘yxatdagi telefon</span><b>${esc((L.malumot || {}).tel || DB.sozlamalar.markazTel || "—")}</b></div>
         <div><span>Ro‘yxatdan o‘tgan</span><b>${sanaMatn(L.royxat)}</b></div>
-        <div><span>${lh.tur === "faol" ? "Litsenziya" : "Sinov"} tugashi</span><b>${sanaMatn(lh.tugash)}${lh.qoldi !== null ? ` (${lh.qoldi < 0 ? "tugagan" : lh.qoldi + " kun qoldi"})` : ""}</b></div></div>
-      <p class="muted sm" style="margin:0">Davom ettirish yoki uzaytirish uchun sotuvchiga murojaat qiling: ${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}.</p></section>
-      <section class="card"><form id="litsenziya-forma" class="forma" novalidate><div class="card-h" style="margin:0"><h2>Faollashtirish kodi</h2></div>
-        <label class="maydon"><span>Kod</span><textarea id="l-kod" rows="3" placeholder="Sotuvchi yuborgan kodni shu yerga qo‘ying" spellcheck="false" autocomplete="off" autocapitalize="none" style="font-family:ui-monospace,Consolas,monospace;word-break:break-all"></textarea></label>
-        <p class="xato" id="l-xato" hidden></p><button type="submit" class="btn btn-primary">Faollashtirish</button></form></section></div>`;
+        <div><span>${lh.tur === "faol" ? "Obuna" : "Sinov"} tugashi</span><b>${sanaMatn(lh.tugash)}${lh.qoldi !== null ? ` (${lh.qoldi < 0 ? "tugagan" : lh.qoldi + " kun qoldi"})` : ""}</b></div>
+        <div><span>Oxirgi tekshiruv</span><b>${oxirgi ? `${sanaMatn(sanaStr(oxirgi))}, ${pad2(oxirgi.getHours())}:${pad2(oxirgi.getMinutes())}` : "—"}</b></div></div>
+      <p class="muted sm" style="margin:0">Obunani uzaytirish uchun sotuvchiga murojaat qiling: ${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}. To‘lovdan keyin obuna avtomatik yangilanadi.</p>
+      <div class="amal-qator"><button class="btn btn-soft" data-act="obuna-yangila">${icon("refresh", 18)} Holatni yangilash</button></div></section>`;
   }
 
   if (t === "xodimlar") return h + bolimBosh("Har bir xodim o‘z logini va 8 xonali paroli bilan kiradi. Login avtomatik tuziladi, parolni siz berasiz. Lavozimiga qarab faqat ruxsat berilgan bo‘limlarni ko‘radi.", `<button class="btn btn-primary" data-act="xodim-yangi">${icon("plus", 18)} Xodim qo‘shish</button>`) + `
@@ -248,7 +247,8 @@ async function tikla(matn) {
     await Ombor.almashtir(x);
     if (!DB.xodimlar.length) { Sessiya.tugat(); Ilova.holat = "kirish"; UI.kirish.tab = "royxat"; }
     else if (!men()) { Sessiya.tugat(); Ilova.holat = "kirish"; UI.kirish.tab = "kirish"; }
-    UI.dav = null; UI.tf.oid = ""; render(); toast("Ma’lumotlar tiklandi");
+    UI.dav = null; UI.tf.oid = ""; Server.holat = "kutilmoqda"; render(); toast("Ma’lumotlar tiklandi");
+    Server.tekshir();
   } catch (e) { toast("Tiklashda xato: " + (e.message || e), "warn"); }
 }
 function csvMatn(q) {

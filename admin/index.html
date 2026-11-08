@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Markazlar boshqaruvi</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0F1B2D">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230F1B2D'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='700' font-size='24' fill='white' text-anchor='middle'%3EOM%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #EEF1F6; --surface: #FFFFFF; --s2: #F4F6FA; --line: #E1E6EF; --text: #0F1B2D; --muted: #5A6880;
+  --primary: #2563EB; --primary-soft: #E7EEFD; --ok: #047857; --ok-soft: #E3F5EE; --warn: #B45309; --warn-soft: #FDF1E2;
+  --bad: #C81E1E; --bad-soft: #FCE8E8; --ink: #0F1B2D; --on-ink: #FFFFFF;
+  --r: 16px; --shadow: 0 1px 2px rgb(16 30 60 / .06), 0 8px 24px -12px rgb(16 30 60 / .16);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0A1120; --surface: #121B2C; --s2: #19243A; --line: #24314A; --text: #E7EDF7; --muted: #97A5BC;
+  --primary: #6B9BFF; --primary-soft: #1B2A4A; --ok: #34D399; --ok-soft: #12302A; --warn: #FBBF24; --warn-soft: #33270F;
+  --bad: #F87171; --bad-soft: #3A1A1D; --ink: #E7EDF7; --on-ink: #0A1120; --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 8px 24px -12px rgb(0 0 0 / .5);
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0A1120; --surface: #121B2C; --s2: #19243A; --line: #24314A; --text: #E7EDF7; --muted: #97A5BC;
+  --primary: #6B9BFF; --primary-soft: #1B2A4A; --ok: #34D399; --ok-soft: #12302A; --warn: #FBBF24; --warn-soft: #33270F;
+  --bad: #F87171; --bad-soft: #3A1A1D; --ink: #E7EDF7; --on-ink: #0A1120; --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 8px 24px -12px rgb(0 0 0 / .5);
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 Onest, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+.sahifa { max-width: 1400px; margin: 0 auto; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 18px; }
+header.bosh { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.logo { width: 40px; height: 40px; border-radius: 12px; background: var(--ink); color: var(--on-ink); display: grid; place-items: center; font-weight: 700; font-size: 14px; letter-spacing: .02em; flex: none; }
+header.bosh h1 { font-size: 20px; margin: 0; line-height: 1.2; text-wrap: balance; }
+header.bosh .ost { color: var(--muted); font-size: 13px; }
+header.bosh .o { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+.btn:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--line)); }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.asosiy { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn.yumshoq { background: var(--primary-soft); border-color: transparent; color: var(--primary); }
+.btn.xavfli { color: var(--bad); }
+.btn.xavfli-t { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn.ok-t { background: var(--ok); border-color: var(--ok); color: #fff; }
+.btn.kichik { min-height: 34px; padding: 0 12px; font-size: 13px; border-radius: 10px; }
+.btn:focus-visible, input:focus-visible, textarea:focus-visible, .chip:focus-visible, tr:focus-visible, .kart:focus-visible { outline: 2.5px solid var(--primary); outline-offset: 2px; }
+svg.ic { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Kirish */
+.kirish { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.kirish form { width: min(400px, 100%); background: var(--surface); border-radius: 22px; padding: 28px 24px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 16px; }
+.kirish h1 { margin: 0; font-size: 22px; } .kirish p { margin: 0; color: var(--muted); }
+label.maydon { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+input, textarea { background: var(--s2); border: 1.5px solid var(--line); border-radius: 12px; min-height: 44px; padding: 10px 12px; width: 100%; }
+textarea { min-height: 80px; resize: vertical; }
+input:focus, textarea:focus { outline: none; border-color: var(--primary); }
+.xato { color: var(--bad); font-weight: 600; font-size: 14px; margin: 0; }
+
+/* Ko‘rsatkichlar */
+.plitkalar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.plitka { background: var(--surface); border-radius: var(--r); padding: 14px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; border: 0; text-align: left; cursor: pointer; }
+.plitka b { font-size: 26px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.plitka span { color: var(--muted); font-size: 13px; }
+.plitka[aria-pressed="true"] { outline: 2px solid var(--primary); }
+.plitka.ok b { color: var(--ok); } .plitka.warn b { color: var(--warn); } .plitka.bad b { color: var(--bad); }
+
+/* Asboblar */
+.asboblar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.qidiruv { flex: 1 1 260px; position: relative; }
+.qidiruv input { padding-left: 38px; background: var(--surface); }
+.qidiruv svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.chiplar { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+.chip .son { opacity: .7; font-variant-numeric: tabular-nums; }
+
+/* Jadval */
+.karta { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+.jadval-q { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 12px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr { cursor: pointer; } tbody tr:hover { background: var(--s2); }
+tbody tr:last-child td { border-bottom: 0; }
+td.raq { text-align: right; font-variant-numeric: tabular-nums; }
+.id { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); }
+.nom b { display: block; } .nom span { color: var(--muted); font-size: 13px; }
+.pill { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.sinov { background: var(--primary-soft); color: var(--primary); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.bad { background: var(--bad-soft); color: var(--bad); }
+.muted { color: var(--muted); } .sm { font-size: 13px; }
+.bosh-holat { padding: 40px 20px; text-align: center; color: var(--muted); }
+.kartalar { display: none; }
+@media (max-width: 760px) {
+  .jadval-q { display: none; }
+  .kartalar { display: flex; flex-direction: column; }
+  .kart { padding: 14px 16px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; cursor: pointer; background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; width: 100%; }
+  .kart:last-child { border-bottom: 0; }
+  header.bosh .o { margin-left: 0; width: 100%; }
+}
+
+/* Panel */
+.parda { position: fixed; inset: 0; background: rgb(8 14 28 / .45); z-index: 20; display: flex; justify-content: flex-end; }
+.panel { width: min(520px, 100%); height: 100%; background: var(--bg); overflow-y: auto; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 32px 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: -12px 0 40px -12px rgb(0 0 0 / .3); }
+.panel-bosh { display: flex; align-items: flex-start; gap: 12px; }
+.panel-bosh h2 { margin: 0; font-size: 20px; line-height: 1.25; text-wrap: balance; }
+.panel-bosh .yop { margin-left: auto; }
+.blok { background: var(--surface); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+.blok h3 { margin: 0; font-size: 14px; }
+.malumot { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 14px; margin: 0; }
+.malumot dt { color: var(--muted); } .malumot dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.qator { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tasdiq { background: var(--bad-soft); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--on-ink); padding: 12px 18px; border-radius: 12px; font-weight: 600; z-index: 40; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+.aylana { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid currentColor; border-top-color: transparent; animation: a .8s linear infinite; display: inline-block; }
+@keyframes a { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="ilova"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script>
+"use strict";
+/* =====================================================================
+   O‘quv Markaz CRM — sotuvchining admin sayti
+   Barcha markazlarni ko‘rish, bloklash, muddatini uzaytirish, xabar yuborish.
+   Ma’lumot Google Sheets serveridan keladi; parol serverda tekshiriladi.
+   ===================================================================== */
+const SERVER = "";   // Google Apps Script veb-ilova manzili (CRM dagi SOZLAMALAR.server bilan bir xil)
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const OYLAR = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
+const sanaMatn = s => { if (!s) return "—"; const [y, m, d] = s.slice(0, 10).split("-").map(Number); return `${d}-${OYLAR[m - 1]} ${y}`; };
+const kunFarqi = (a, b) => Math.round((Date.UTC(...b.split("-").map((x, i) => i === 1 ? x - 1 : +x)) - Date.UTC(...a.split("-").map((x, i) => i === 1 ? x - 1 : +x))) / 864e5);
+const sanaQosh = (s, kun) => { const p = s.split("-").map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2] + kun)).toISOString().slice(0, 10); };
+const oyQosh = (s, n) => { const p = s.split("-").map(Number), d = new Date(Date.UTC(p[0], p[1] - 1 + n, 1)), oxir = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(Math.min(p[2], oxir)).padStart(2, "0")}`; };
+const son = n => String(+n || 0).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+const IC = {
+  qidir: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5", yangila: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7", chiq: "M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11",
+  x: "M6 6l12 12M18 6L6 18", nusxa: "M9 9h11v11H9zM5 15H4V4h11v1", qulf: "M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3", ochiq: "M6 11h12v9H6zM8 11V8a4 4 0 0 1 7.5-2",
+  xabar: "M4 5h16v11H8l-4 4z", tar: "M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14", oy: "M12 3a9 9 0 1 0 9 9", kun: "M4 6h16v14H4zM4 10h16M9 3v4M15 3v4",
+};
+const ic = (n, s = 18) => `<svg class="ic" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true"><path d="${IC[n]}"/></svg>`;
+
+const H = {
+  parol: (() => { try { return sessionStorage.getItem("om-admin") || ""; } catch (e) { return ""; } })(),
+  markazlar: [], bugun: "", yuklanmoqda: false, xato: "",
+  filtr: "hammasi", qidiruv: "", tanlangan: "", tasdiq: "",
+};
+
+async function sorov(amal, d = {}) {
+  if (!SERVER) throw new Error("Server manzili sozlanmagan (SERVER).");
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 30000);
+  try {
+    const r = await fetch(SERVER, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ amal, parol: H.parol, ...d }), signal: ac.signal, redirect: "follow" });
+    if (!r.ok) throw new Error("Server javobi: " + r.status);
+    const j = await r.json();
+    if (!j.ok && (j.kod === "parol" || j.kod === "blok")) { chiqish(j.xato); throw new Error(j.xato); }
+    return j;
+  } catch (e) { throw e.name === "AbortError" ? new Error("Server javob bermadi.") : e; }
+  finally { clearTimeout(t); }
+}
+function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600); }
+
+// Markaz holati: bloklangan > tugagan > obuna > sinov
+function tur(m) {
+  const tugash = [m.sinovTugash, m.tugash].filter(Boolean).sort().pop() || "";
+  const qoldi = tugash ? kunFarqi(H.bugun, tugash) : -1;
+  if (m.holat === "bloklangan") return { k: "bloklangan", n: "Bloklangan", c: "bad", tugash, qoldi };
+  if (qoldi < 0) return { k: "tugagan", n: "Muddati tugagan", c: "warn", tugash, qoldi };
+  if (m.tugash && m.tugash >= (m.sinovTugash || "")) return { k: "obuna", n: "Obuna", c: "ok", tugash, qoldi };
+  return { k: "sinov", n: "Bepul sinov", c: "sinov", tugash, qoldi };
+}
+const FILTRLAR = [["hammasi", "Hammasi"], ["obuna", "Obuna"], ["sinov", "Bepul sinov"], ["arafa", "7 kunda tugaydi"], ["tugagan", "Muddati tugagan"], ["bloklangan", "Bloklangan"]];
+const mos = (m, f) => { const t = tur(m); return f === "hammasi" || t.k === f || (f === "arafa" && (t.k === "obuna" || t.k === "sinov") && t.qoldi <= 7); };
+const oxirgiMatn = s => { if (!s) return "—"; const kun = kunFarqi(s.slice(0, 10), H.bugun); return kun <= 0 ? `bugun, ${s.slice(11, 16)}` : kun === 1 ? "kecha" : `${kun} kun oldin`; };
+
+/* ---------- Chizish ---------- */
+function chiz() {
+  const ilova = $("#ilova");
+  if (!H.parol) { ilova.innerHTML = kirishOyna(); setTimeout(() => $("#parol") && $("#parol").focus(), 30); return; }
+  const l = H.markazlar, b = H.bugun;
+  const sana = t => l.filter(m => mos(m, t)).length;
+  const qidir = H.qidiruv.trim().toLowerCase(), qd = qidir.replace(/\D/g, "");
+  const royxat = l.filter(m => mos(m, H.filtr) && (!qidir || [m.nomi, m.rahbar, m.id, m.manzil, m.login].some(x => String(x || "").toLowerCase().includes(qidir)) || (qd.length >= 3 && String(m.tel).replace(/\D/g, "").includes(qd))))
+    .sort((a, c) => (c.royxat || "").localeCompare(a.royxat || "") || c.id.localeCompare(a.id));
+  const oyYangi = l.filter(m => (m.royxat || "").slice(0, 7) === (b || "").slice(0, 7)).length;
+  const oquvchi = l.filter(m => tur(m).k !== "bloklangan").reduce((s, m) => s + (+m.oquvchilar || 0), 0);
+  const plitka = (f, n, cls, matn) => `<button class="plitka ${cls}" data-filtr="${f}" aria-pressed="${H.filtr === f}"><b>${son(n)}</b><span>${matn}</span></button>`;
+  ilova.innerHTML = `<div class="sahifa">
+    <header class="bosh"><div class="logo">OM</div><div><h1>Markazlar boshqaruvi</h1><div class="ost">O‘quv Markaz CRM · ${b ? sanaMatn(b) : ""}</div></div>
+      <div class="o"><button class="btn" data-a="yangila" ${H.yuklanmoqda ? "disabled" : ""}>${H.yuklanmoqda ? `<span class="aylana"></span>` : ic("yangila")} Yangilash</button>
+        <button class="btn" data-a="chiqish">${ic("chiq")} Chiqish</button></div></header>
+    ${H.xato ? `<p class="xato">${esc(H.xato)}</p>` : ""}
+    <div class="plitkalar">
+      ${plitka("hammasi", l.length, "", "Jami markaz")}${plitka("obuna", sana("obuna"), "ok", "Obunada")}${plitka("sinov", sana("sinov"), "", "Bepul sinovda")}
+      ${plitka("arafa", sana("arafa"), "warn", "7 kunda tugaydi")}${plitka("tugagan", sana("tugagan"), "warn", "Muddati tugagan")}${plitka("bloklangan", sana("bloklangan"), "bad", "Bloklangan")}
+      <div class="plitka" style="cursor:default"><b>${son(oyYangi)}</b><span>Shu oy ro‘yxatdan o‘tgan</span></div>
+      <div class="plitka" style="cursor:default"><b>${son(oquvchi)}</b><span>Jami faol o‘quvchi</span></div>
+    </div>
+    <div class="asboblar"><label class="qidiruv">${ic("qidir")}<span hidden>Qidiruv</span><input id="qidiruv" type="search" placeholder="Nomi, telefon, rahbar yoki ID" value="${esc(H.qidiruv)}" autocomplete="off"></label>
+      <div class="chiplar">${FILTRLAR.map(([k, n]) => `<button class="chip" data-filtr="${k}" aria-pressed="${H.filtr === k}">${n} <span class="son">${sana(k)}</span></button>`).join("")}</div></div>
+    <section class="karta">${royxat.length ? `
+      <div class="jadval-q"><table><thead><tr><th>ID</th><th>Markaz</th><th>Telefon</th><th>Holat</th><th>Tugashi</th><th style="text-align:right">O‘quvchi</th><th>Oxirgi kirish</th><th>Ro‘yxat</th></tr></thead>
+        <tbody>${royxat.map(m => { const t = tur(m); return `<tr data-id="${esc(m.id)}" tabindex="0">
+          <td class="id">${esc(m.id)}</td><td class="nom"><b>${esc(m.nomi)}</b><span>${esc(m.rahbar)}${m.manzil ? " · " + esc(m.manzil) : ""}</span></td>
+          <td>${esc(m.tel)}</td><td><span class="pill ${t.c}">${t.n}</span></td>
+          <td>${sanaMatn(t.tugash)}<div class="muted sm">${t.qoldi < 0 ? `${-t.qoldi} kun o‘tdi` : `${t.qoldi} kun qoldi`}</div></td>
+          <td class="raq">${son(m.oquvchilar)}</td><td class="muted">${oxirgiMatn(m.oxirgiKirish)}</td><td class="muted">${sanaMatn(m.royxat)}</td></tr>`; }).join("")}</tbody></table></div>
+      <div class="kartalar">${royxat.map(m => { const t = tur(m); return `<button class="kart" data-id="${esc(m.id)}">
+          <div class="nom"><b>${esc(m.nomi)}</b><span>${esc(m.tel)} · ${esc(m.rahbar)}</span></div><span class="pill ${t.c}">${t.n}</span>
+          <span class="muted sm">${esc(m.id)} · ${son(m.oquvchilar)} o‘quvchi · ${oxirgiMatn(m.oxirgiKirish)}</span><span class="muted sm">${t.qoldi < 0 ? "tugagan" : t.qoldi + " kun"}</span></button>`; }).join("")}</div>`
+      : `<div class="bosh-holat">${l.length ? "Bu filtr bo‘yicha markaz yo‘q." : H.yuklanmoqda ? "Yuklanmoqda…" : "Hali birorta markaz ro‘yxatdan o‘tmagan. Markaz CRM’da ro‘yxatdan o‘tishi bilan shu yerda paydo bo‘ladi."}</div>`}
+    </section></div>${H.tanlangan ? panel() : ""}`;
+}
+
+function kirishOyna() {
+  return `<div class="kirish"><form id="kirish-forma" novalidate>
+    <div class="logo">OM</div><div><h1>Markazlar boshqaruvi</h1><p>Faqat sotuvchi uchun</p></div>
+    <label class="maydon">Admin parol<input id="parol" type="password" autocomplete="current-password" required></label>
+    <p class="xato" id="k-xato" ${H.xato ? "" : "hidden"}>${esc(H.xato)}</p>
+    <button class="btn asosiy" type="submit">Kirish</button></form></div>`;
+}
+
+function panel() {
+  const m = H.markazlar.find(x => x.id === H.tanlangan); if (!m) return "";
+  const t = tur(m), boshi = t.tugash && t.tugash >= H.bugun ? t.tugash : H.bugun;
+  const tasdiq = H.tasdiq;
+  return `<div class="parda" data-a="yop"><aside class="panel" role="dialog" aria-modal="true" aria-label="${esc(m.nomi)}">
+    <div class="panel-bosh"><div><div class="id">${esc(m.id)}</div><h2>${esc(m.nomi)}</h2><span class="pill ${t.c}" style="margin-top:6px">${t.n}</span></div>
+      <button class="btn kichik yop" data-a="yop" aria-label="Yopish">${ic("x")}</button></div>
+
+    <section class="blok"><h3>Muddat</h3>
+      <dl class="malumot"><dt>Bepul sinov</dt><dd>${sanaMatn(m.sinovTugash)} gacha</dd><dt>Obuna</dt><dd>${m.tugash ? sanaMatn(m.tugash) + " gacha" : "yo‘q"}</dd>
+        <dt>Holat</dt><dd>${t.qoldi < 0 ? `${sanaMatn(t.tugash)} da tugagan` : `${t.qoldi} kun qoldi`}</dd></dl>
+      <div class="muted sm">Obunani uzaytirish (${sanaMatn(boshi)} dan):</div>
+      <div class="qator">${[[1, "1 oy"], [3, "3 oy"], [6, "6 oy"], [12, "1 yil"]].map(([n, s]) => `<button class="btn yumshoq kichik" data-a="uzaytir" data-sana="${oyQosh(boshi, n)}">+${s}</button>`).join("")}
+        <button class="btn kichik" data-a="sinov7" data-sana="${sanaQosh(m.sinovTugash && m.sinovTugash >= H.bugun ? m.sinovTugash : H.bugun, 7)}">+7 kun sinov</button></div>
+      <div class="qator"><label class="maydon" style="flex:1 1 180px">Yoki aniq sana<input id="p-sana" type="date" value="${esc(m.tugash || "")}"></label>
+        <button class="btn kichik" data-a="sana-saqla" style="align-self:flex-end;min-height:44px">Saqlash</button></div>
+    </section>
+
+    <section class="blok"><h3>Kirish huquqi</h3>
+      ${m.holat === "bloklangan"
+        ? `<p class="muted sm" style="margin:0">Markaz bloklangan: dasturga kira olmaydi. Ma’lumotlari o‘z qurilmasida saqlanib turibdi.</p><div class="qator"><button class="btn ok-t" data-a="blokdan">${ic("ochiq")} Blokdan chiqarish</button></div>`
+        : tasdiq === "blok" ? `<div class="tasdiq"><b>Markazni bloklaysizmi?</b><span class="sm">Keyingi tekshiruvda (10 daqiqagacha) dastur yopiladi. Ma’lumotlari o‘chmaydi.</span>
+            <div class="qator"><button class="btn xavfli-t" data-a="blok-ha">Ha, bloklash</button><button class="btn" data-a="bekor">Bekor qilish</button></div></div>`
+        : `<p class="muted sm" style="margin:0">Bloklangan markaz dasturga kira olmaydi, lekin ma’lumotlari o‘chmaydi.</p><div class="qator"><button class="btn xavfli" data-a="blok">${ic("qulf")} Bloklash</button></div>`}
+    </section>
+
+    <section class="blok"><h3>Markazga xabar</h3>
+      <p class="muted sm" style="margin:0">Xabar markaz dasturining tepasida chiqadi. Bloklanganda yoki muddat tugaganda ham ko‘rinadi.</p>
+      <textarea id="p-xabar" maxlength="500" placeholder="Masalan: Obuna 1-dekabrda tugaydi, to‘lovni unutmang.">${esc(m.xabar)}</textarea>
+      <div class="qator"><button class="btn asosiy kichik" data-a="xabar">${ic("xabar")} Yuborish</button>${m.xabar ? `<button class="btn kichik" data-a="xabar-ochir">Xabarni olib tashlash</button>` : ""}</div>
+    </section>
+
+    <section class="blok"><h3>Ma’lumot</h3>
+      <dl class="malumot"><dt>Rahbar</dt><dd>${esc(m.rahbar)}</dd>
+        <dt>Telefon</dt><dd><span>${esc(m.tel)}</span> <button class="btn kichik" data-a="nusxa" data-v="${esc(m.tel)}" aria-label="Telefonni nusxalash" style="min-height:28px;padding:0 8px">${ic("nusxa", 14)}</button></dd>
+        <dt>Manzil</dt><dd>${esc(m.manzil || "—")}</dd><dt>Hajmi</dt><dd>${esc(m.hajm || "—")}</dd><dt>Rahbar logini</dt><dd>${esc(m.login || "—")}</dd>
+        <dt>Ro‘yxatdan o‘tgan</dt><dd>${sanaMatn(m.royxat)}</dd><dt>Oxirgi kirish</dt><dd>${esc(m.oxirgiKirish || "—")}</dd>
+        <dt>Faol o‘quvchi</dt><dd>${son(m.oquvchilar)}</dd><dt>Guruh</dt><dd>${son(m.guruhlar)}</dd><dt>Xodim</dt><dd>${son(m.xodimlar)}</dd><dt>Versiya</dt><dd>${esc(m.versiya || "—")}</dd></dl>
+    </section>
+
+    <section class="blok"><h3>Izoh (faqat sizga ko‘rinadi)</h3>
+      <textarea id="p-izoh" maxlength="500" placeholder="Masalan: Naqd to‘ladi, keyingi to‘lov 1-dekabr">${esc(m.izoh)}</textarea>
+      <div class="qator"><button class="btn kichik" data-a="izoh">Saqlash</button></div>
+    </section>
+
+    <section class="blok">${tasdiq === "ochir" ? `<div class="tasdiq"><b>«${esc(m.nomi)}» ro‘yxatdan o‘chirilsinmi?</b><span class="sm">Markaz dasturi «Markaz topilmadi» deb yopiladi. Odatda bloklash yetarli. Bu amalni qaytarib bo‘lmaydi.</span>
+        <div class="qator"><button class="btn xavfli-t" data-a="ochir-ha">Ha, o‘chirish</button><button class="btn" data-a="bekor">Bekor qilish</button></div></div>`
+      : `<div class="qator"><button class="btn xavfli kichik" data-a="ochir">${ic("tar", 16)} Ro‘yxatdan o‘chirish</button></div>`}</section>
+  </aside></div>`;
+}
+
+/* ---------- Amallar ---------- */
+async function yukla(jim) {
+  H.yuklanmoqda = true; if (!jim) chiz();
+  try { const j = await sorov("admin_royxat"); if (!j.ok) throw new Error(j.xato); H.markazlar = j.markazlar; H.bugun = j.bugun; H.xato = ""; }
+  catch (e) { if (H.parol) H.xato = "Yuklab bo‘lmadi: " + e.message; }
+  H.yuklanmoqda = false; chiz();
+}
+async function ozgar(maydonlar, xabar) {
+  const id = H.tanlangan;
+  document.querySelectorAll(".panel button").forEach(b => { b.disabled = true; });
+  try {
+    const j = await sorov("admin_ozgar", { id, maydonlar });
+    if (!j.ok) throw new Error(j.xato);
+    const i = H.markazlar.findIndex(x => x.id === id); if (i >= 0) H.markazlar[i] = j.markaz;
+    H.bugun = j.bugun || H.bugun; H.tasdiq = ""; chiz(); toast(xabar);
+  } catch (e) { chiz(); toast("Saqlanmadi: " + e.message); }
+}
+function chiqish(sabab) {
+  H.parol = ""; H.markazlar = []; H.tanlangan = ""; H.xato = sabab || "";
+  try { sessionStorage.removeItem("om-admin"); } catch (e) {}
+  chiz();
+}
+const AMAL = {
+  yangila: () => yukla(),
+  chiqish: () => chiqish(),
+  yop: (el, e) => { if (e.target === el || el.classList.contains("yop")) { H.tanlangan = ""; H.tasdiq = ""; chiz(); } },
+  uzaytir: el => ozgar({ tugash: el.dataset.sana }, `Obuna ${sanaMatn(el.dataset.sana)} gacha uzaytirildi`),
+  sinov7: el => ozgar({ sinovTugash: el.dataset.sana }, `Sinov ${sanaMatn(el.dataset.sana)} gacha uzaytirildi`),
+  "sana-saqla": () => { const v = $("#p-sana").value; ozgar({ tugash: v }, v ? `Obuna ${sanaMatn(v)} gacha` : "Obuna olib tashlandi"); },
+  blok: () => { H.tasdiq = "blok"; chiz(); },
+  "blok-ha": () => ozgar({ holat: "bloklangan" }, "Markaz bloklandi"),
+  blokdan: () => ozgar({ holat: "faol" }, "Markaz blokdan chiqarildi"),
+  bekor: () => { H.tasdiq = ""; chiz(); },
+  xabar: () => ozgar({ xabar: $("#p-xabar").value.trim() }, "Xabar saqlandi: markaz keyingi tekshiruvda ko‘radi"),
+  "xabar-ochir": () => ozgar({ xabar: "" }, "Xabar olib tashlandi"),
+  izoh: () => ozgar({ izoh: $("#p-izoh").value.trim() }, "Izoh saqlandi"),
+  ochir: () => { H.tasdiq = "ochir"; chiz(); },
+  "ochir-ha": async () => {
+    try { const j = await sorov("admin_ochir", { id: H.tanlangan }); if (!j.ok) throw new Error(j.xato); H.markazlar = H.markazlar.filter(x => x.id !== H.tanlangan); H.tanlangan = ""; H.tasdiq = ""; chiz(); toast("Markaz o‘chirildi"); }
+    catch (e) { toast("O‘chirilmadi: " + e.message); }
+  },
+  nusxa: el => { const v = el.dataset.v; try { navigator.clipboard.writeText(v).then(() => toast("Nusxalandi: " + v), () => toast(v)); } catch (e) { toast(v); } },
+};
+document.addEventListener("click", e => {
+  const f = e.target.closest("[data-filtr]"); if (f) { H.filtr = f.dataset.filtr; chiz(); return; }
+  const a = e.target.closest("[data-a]");
+  if (a && AMAL[a.dataset.a]) { if (a.dataset.a !== "yop") e.stopPropagation(); AMAL[a.dataset.a](a, e); return; }
+  const r = e.target.closest("[data-id]"); if (r) { H.tanlangan = r.dataset.id; H.tasdiq = ""; chiz(); }
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && H.tanlangan) { H.tanlangan = ""; H.tasdiq = ""; chiz(); }
+  if (e.key === "Enter" && e.target.matches("tr[data-id]")) { H.tanlangan = e.target.dataset.id; chiz(); }
+});
+document.addEventListener("input", e => {
+  if (e.target.id === "qidiruv") { H.qidiruv = e.target.value; const p = e.target.selectionStart; chiz(); const q = $("#qidiruv"); q.focus(); try { q.setSelectionRange(p, p); } catch (x) {} }
+});
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "kirish-forma") return;
+  e.preventDefault();
+  const p = $("#parol").value, b = e.target.querySelector("button"), x = $("#k-xato");
+  if (!p) return;
+  b.disabled = true; b.innerHTML = `<span class="aylana"></span> Tekshirilmoqda…`;
+  H.parol = p;
+  try {
+    const j = await sorov("admin_kirish");
+    if (!j.ok) throw new Error(j.xato);
+    try { sessionStorage.setItem("om-admin", p); } catch (er) {}
+    H.xato = ""; H.bugun = j.bugun; yukla();
+  } catch (er) {
+    H.parol = ""; b.disabled = false; b.textContent = "Kirish"; x.textContent = er.message; x.hidden = false;
+  }
+});
+// Panel ochiq bo‘lmaganda ro‘yxat har 2 daqiqada yangilanadi
+setInterval(() => { if (H.parol && !H.tanlangan && document.visibilityState === "visible") yukla(true); }, 120000);
+chiz();
+if (H.parol) yukla();
+</script>
+</body>
+</html>

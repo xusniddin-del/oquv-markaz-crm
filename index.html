@@ -711,6 +711,13 @@ pre.kod-blok { background: var(--surface-2); border: 1px solid var(--line); bord
 .banner.ok > .ic { color: var(--ok); }
 
 .yon-pas .versiya { display:block; padding: 6px 14px 0; font-size: 12px; }
+
+/* Server holati ekranlari */
+.yuklanmoqda { display:inline-flex; align-items:center; gap:10px; }
+.aylana { width:18px; height:18px; border-radius:50%; border:2.5px solid var(--line); border-top-color: var(--primary); animation: aylan .8s linear infinite; }
+@keyframes aylan { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .aylana { animation-duration: 2.4s; } }
+.logo.xavf { background: var(--bad, #C81E1E); }
 </style>
 </head>
 <body>
@@ -763,8 +770,9 @@ const SOZLAMALAR = {
 
   // Dastur egasi (sotuvchi). Kirish va faollashtirish oynasida ko‘rinadi.
   sotuvchi: { nom: "O‘quv Markaz CRM", tel: "+998 90 841 02 20", telegram: "" },
-  // Faollashtirish kodini tekshiruvchi OCHIQ kalit (ECDSA P-256). Maxfiy kalit faqat sotuvchining generatorida.
-  litsenziyaKalit: "BOA8vLj8EIiDrOk0A5xKc3PQhchHCzU9Ku61zRF7uleypxHzpE1u1Y9RU4rS6yxBetxYzse5TAD6qsFiUuCLhCE",
+  // Markazlar serveri (Google Apps Script veb-ilova manzili). Bo‘sh bo‘lsa, ro‘yxat va tekshiruv ishlamaydi.
+  server: "",
+  tekshirDaqiqa: 10,             // dastur ochiq turganda holat shuncha daqiqada bir tekshiriladi
   telegramHavola: "https://t.me/share/url?text=",
 
   // Rollar qaysi bo‘limlarni ko‘radi ("*" = hammasi)
@@ -883,26 +891,13 @@ function loginYasa(ism, id = "", db = DB) {
 const parolYasa = () => { const a = new Uint32Array(8); try { crypto.getRandomValues(a); } catch (e) { a.forEach((_, i) => { a[i] = Math.random() * 1e9; }); } return [...a].map(x => x % 10).join("").replace(/^0/, "7"); };
 const parolTogri = p => /^\d{8}$/.test(p);               // xodim paroli: 8 xonali raqam
 const loginTogri = l => /^[a-z0-9][a-z0-9._-]{2,29}$/.test(l);  // kichik lotin harf, raqam, . _ -
-// Faollashtirish kodi markaz ro‘yxatdan o‘tgan telefon raqamiga bog‘lanadi (oxirgi 9 raqam).
-// Kod ko‘rinishi: YYMMDD-<raqamli imzo>. Imzoni faqat sotuvchi yarata oladi, dastur uni ochiq kalit bilan tekshiradi.
-const markazTelKalit = () => String((DB.litsenziya.malumot || {}).tel || DB.sozlamalar.markazTel || "").replace(/\D/g, "").slice(-9);
-const b64u = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), c => c.charCodeAt(0));
-async function kodTekshir(kod) {
-  const m = String(kod || "").replace(/\s/g, "").match(/^(\d{2})(\d{2})(\d{2})-([A-Za-z0-9_-]{80,90})$/);
-  const kalit = markazTelKalit();
-  if (!m || kalit.length < 9) return null;
-  const tugash = `20${m[1]}-${m[2]}-${m[3]}`;
-  try {
-    const k = await crypto.subtle.importKey("raw", b64u(SOZLAMALAR.litsenziyaKalit), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
-    const ok = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, k, b64u(m[4]), new TextEncoder().encode(`oquv-markaz-crm|${kalit}|${tugash}`));
-    return ok ? tugash : null;
-  } catch (e) { return null; }
-}
+// Markaz obunasi: ma’lumotni server beradi (holat, sinov va obuna muddati, server sanasi)
 function litsenziyaHolati() {
   const L = DB.litsenziya || {}, tugash = [L.sinovTugash, L.tugash].filter(Boolean).sort().pop() || "";
-  if (!L.royxat || !tugash) return { tur: "yoq", tugagan: false, qoldi: null, tugash: "" };
-  const qoldi = kunFarqi(bugun(), tugash);
-  return { tur: L.tugash && L.tugash >= (L.sinovTugash || "") ? "faol" : "sinov", tugash, qoldi, tugagan: qoldi < 0 };
+  if (!L.royxat) return { tur: "yoq", tugagan: false, qoldi: null, tugash: "" };
+  const qoldi = tugash ? kunFarqi(serverBugun(), tugash) : -1;
+  const tur = L.holat === "bloklangan" ? "bloklangan" : L.tugash && L.tugash >= (L.sinovTugash || "") ? "faol" : "sinov";
+  return { tur, tugash, qoldi, tugagan: qoldi < 0, bloklangan: L.holat === "bloklangan" };
 }
 
 /* =====================================================================
@@ -919,7 +914,7 @@ function boshDB() {
     versiya: 3,
     sozlamalar: { markazNomi: "", markazTel: "", manzil: "" },
     xodimlar: [],      // {id, ism, rol (lavozim), login, pinXesh (parol xeshi), oqituvchiId, filialId, faol}
-    litsenziya: { royxat: "", sinovTugash: "", tugash: "", malumot: {} },   // malumot.tel — faollashtirish kaliti
+    litsenziya: { royxat: "", sinovTugash: "", tugash: "", malumot: {}, markazId: "", token: "", holat: "faol", xabar: "" },   // server bilan bog‘lanish
     oqituvchilar: [],  // {id, ism, tel, fan, oylikTuri, stavka, foizAsosi, izoh, faol}
     xonalar: [],       // {id, nomi, sigim}
     guruhlar: [],      // {id, nomi, fan, oqituvchiId, xonaId, kunlar, boshlanish, tugash, narxTuri, narx, holat, ochilgan}
@@ -1250,6 +1245,7 @@ const ICONS = {
   phone: "M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2",
   eye: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
   logout: "M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11",
+  refresh: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7",
   gift: "M4 10h16v11H4zM2.5 6.5h19V10h-19zM12 6.5V21M12 6.5c-1-3-5-3-5-.5 0 .5 1 .5 5 .5zM12 6.5c1-3 5-3 5-.5 0 .5-1 .5-5 .5z",
 };
 const icon = (n, s = 22) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n] || ICONS.grid}"/></svg>`;
@@ -1499,10 +1495,10 @@ function ot(b) {
 
 function render() {
   if (Ilova.holat === "ichida" && (!men() || men().faol === false)) { Sessiya.tugat(); Ilova.holat = "kirish"; }
-  const tugagan = Ilova.holat === "ichida" && litsenziyaHolati().tugagan;
-  document.body.classList.toggle("kirish-rejim", Ilova.holat !== "ichida" || tugagan);
+  const ekran = serverEkran();   // internet yo‘q, bloklangan yoki muddati tugagan bo‘lsa — kirish ham yopiq
+  document.body.classList.toggle("kirish-rejim", Ilova.holat !== "ichida" || !!ekran);
+  if (ekran) { $("#main").innerHTML = ekran; return; }
   if (Ilova.holat !== "ichida") { $("#main").innerHTML = renderKirish(); return; }
-  if (tugagan) { $("#main").innerHTML = renderMuddatTugadi(); return; }
   if (!BOLIMLAR[UI.bolim] || !mumkin(UI.bolim)) UI.bolim = "bosh";
   const k = UI.bolim, b = BOLIMLAR[k], m = men();
 
@@ -1538,10 +1534,12 @@ function render() {
 function renderBanner() {
   let h = "";
   const L = litsenziyaHolati();
-  if (direktorMi() && L.tur === "sinov" && L.qoldi <= SOZLAMALAR.sinovKun) h += `<div class="banner" role="status">${icon("gift")}<div class="b-mat"><b>Bepul sinov: ${L.qoldi === 0 ? "bugun oxirgi kun" : `${L.qoldi} kun qoldi`}.</b> ${sanaMatn(L.tugash)} gacha. Keyin davom ettirish uchun faollashtirish kodi kerak bo‘ladi.</div>
-    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Faollashtirish</button></div>`;
-  else if (direktorMi() && L.tur === "faol" && L.qoldi <= 7) h += `<div class="banner" role="status">${icon("alert")}<div class="b-mat"><b>Litsenziya ${L.qoldi === 0 ? "bugun" : `${L.qoldi} kundan keyin`} tugaydi</b> (${sanaMatn(L.tugash)}). Yangi kod oling.</div>
-    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Kod kiritish</button></div>`;
+  if (DB.litsenziya.xabar && !DB.meta.demo) h += `<div class="banner" role="status">${icon("message")}<div class="b-mat"><b>Sotuvchidan xabar:</b> ${esc(DB.litsenziya.xabar)}</div></div>`;
+  const aloqa = `Davom ettirish uchun sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : "."}`;
+  if (direktorMi() && !DB.meta.demo && L.tur === "sinov" && L.qoldi !== null && L.qoldi <= SOZLAMALAR.sinovKun) h += `<div class="banner" role="status">${icon("gift")}<div class="b-mat"><b>Bepul sinov: ${L.qoldi === 0 ? "bugun oxirgi kun" : `${L.qoldi} kun qoldi`}.</b> ${sanaMatn(L.tugash)} gacha. ${aloqa}</div>
+    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Obuna</button></div>`;
+  else if (direktorMi() && !DB.meta.demo && L.tur === "faol" && L.qoldi <= 7) h += `<div class="banner" role="status">${icon("alert")}<div class="b-mat"><b>Obuna ${L.qoldi === 0 ? "bugun" : `${L.qoldi} kundan keyin`} tugaydi</b> (${sanaMatn(L.tugash)}). ${aloqa}</div>
+    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Obuna</button></div>`;
   if (!Mahalliy.ishlaydi) h += `<div class="banner xavf" role="alert">${icon("alert")}<div class="b-mat"><b>Brauzer xotirasi ishlamayapti.</b> Ma’lumotlar sahifa yopilganda o‘chadi. Ishni tugatgach albatta zaxira oling.</div></div>`;
   if (direktorMi() && !UI.bannerYopildi && (OQ().length || GR().length)) {
     const z = DB.meta.oxirgiZaxira, kun = z ? kunFarqi(z, bugun()) : null;
@@ -1612,22 +1610,6 @@ function renderKirish() {
       <button type="submit" class="btn btn-primary btn-blok">${icon("gift", 20)} Ro‘yxatdan o‘tish</button>
       <p class="muted sm" style="margin:0">Login: kichik lotin harflar, raqam, nuqta yoki pastki chiziq. Xodimlarga login va parolni keyin dastur ichida o‘zingiz berasiz.</p>
     </form></section>${pas}</div>`;
-}
-// Sinov yoki litsenziya tugaganda: ma’lumot saqlanadi, kod kiritilgach davom etadi
-function renderMuddatTugadi() {
-  const L = DB.litsenziya, h = litsenziyaHolati();
-  return `<div class="kirish"><div class="kirish-bosh"><div class="logo katta">${esc(markazLogo())}</div>
-      <h1>${h.tur === "sinov" ? "Bepul sinov muddati tugadi" : "Litsenziya muddati tugadi"}</h1>
-      <p>${esc(markazNomi())} · ${sanaMatn(h.tugash)} da tugagan. Ma’lumotlaringiz saqlangan.</p></div>
-    <section class="card"><form id="litsenziya-forma" class="forma" novalidate>
-      <p class="muted sm" style="margin:0">Davom ettirish uchun sotuvchiga murojaat qiling va to‘lovdan keyin faollashtirish kodini oling.${L.malumot && L.malumot.tel ? ` Ro‘yxatdan o‘tgan telefoningiz: <b>${esc(L.malumot.tel)}</b>.` : ""}</p>
-      <label class="maydon"><span>Faollashtirish kodi</span><textarea id="l-kod" rows="3" placeholder="Sotuvchi yuborgan kodni shu yerga qo‘ying" spellcheck="false" autocomplete="off" autocapitalize="none" style="font-family:ui-monospace,Consolas,monospace;word-break:break-all"></textarea></label>
-      <p class="xato" id="l-xato" hidden></p>
-      <button type="submit" class="btn btn-primary btn-blok">Faollashtirish</button>
-      <div class="amal-qator">${direktorMi() ? `<button type="button" class="btn btn-ghost btn-sm" data-act="zaxira">${icon("download", 16)} Zaxira olish</button>` : ""}
-        <button type="button" class="btn btn-ghost btn-sm" data-act="chiqish">${icon("logout", 16)} Chiqish</button></div>
-    </form></section>
-    <p class="muted sm" style="text-align:center;margin:0">${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}</p></div>`;
 }
 async function kirishTekshir(login, parol) {
   const k = UI.kirish;
@@ -2357,7 +2339,7 @@ function xarajatForma() {
 
 /* ---------- 9.4 Sozlamalar ---------- */
 function renderSozlamalar() {
-  const tablar = [["markaz", "Markaz"], ["xodimlar", "Xodimlar"], ["xonalar", "Xonalar"], ["litsenziya", "Litsenziya"], ["malumot", "Ma’lumotlar"]];
+  const tablar = [["markaz", "Markaz"], ["xodimlar", "Xodimlar"], ["xonalar", "Xonalar"], ["litsenziya", "Obuna"], ["malumot", "Ma’lumotlar"]];
   let h = `<div class="chiplar" role="group" aria-label="Sozlamalar bo‘limi">${tablar.map(([k, n]) => `<button class="chip" data-act="soz-tab" data-v="${k}" aria-pressed="${UI.sozTab === k}">${n}</button>`).join("")}</div>`;
   const t = UI.sozTab, mv = Mavzu.ol();
   if (t === "markaz") return h + `<div class="ikki-ustun">
@@ -2371,15 +2353,14 @@ function renderSozlamalar() {
       <p class="muted sm" style="margin:0">To‘lov muddati: har oyning ${SOZLAMALAR.tolovKuni}-kuni. Oy o‘rtasida qo‘shilganlarga ${SOZLAMALAR.proporsional ? "dars kunlariga qarab qisman" : "to‘liq oy"} hisoblanadi. Bu qoidalar dastur kodidagi SOZLAMALAR’da o‘zgartiriladi.</p></section></div>`;
 
   if (t === "litsenziya") {
-    const L = DB.litsenziya, lh = litsenziyaHolati();
-    return h + `<div class="ikki-ustun"><section class="card forma"><div class="card-h" style="margin:0"><h2>Holat</h2>${lh.tur === "faol" ? `<span class="pill ok">Faol</span>` : lh.tur === "sinov" ? `<span class="pill warn">Bepul sinov</span>` : ""}</div>
+    const L = DB.litsenziya, lh = litsenziyaHolati(), oxirgi = L.tekshirildi ? new Date(L.tekshirildi) : null;
+    return h + `<section class="card forma" style="max-width:640px"><div class="card-h" style="margin:0"><h2>Obuna</h2>${lh.tur === "faol" ? `<span class="pill ok">Faol</span>` : lh.tur === "sinov" ? `<span class="pill warn">Bepul sinov</span>` : lh.tur === "bloklangan" ? `<span class="pill bad">Bloklangan</span>` : ""}</div>
       <div class="kredit"><div><span>Ro‘yxatdagi telefon</span><b>${esc((L.malumot || {}).tel || DB.sozlamalar.markazTel || "—")}</b></div>
         <div><span>Ro‘yxatdan o‘tgan</span><b>${sanaMatn(L.royxat)}</b></div>
-        <div><span>${lh.tur === "faol" ? "Litsenziya" : "Sinov"} tugashi</span><b>${sanaMatn(lh.tugash)}${lh.qoldi !== null ? ` (${lh.qoldi < 0 ? "tugagan" : lh.qoldi + " kun qoldi"})` : ""}</b></div></div>
-      <p class="muted sm" style="margin:0">Davom ettirish yoki uzaytirish uchun sotuvchiga murojaat qiling: ${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}.</p></section>
-      <section class="card"><form id="litsenziya-forma" class="forma" novalidate><div class="card-h" style="margin:0"><h2>Faollashtirish kodi</h2></div>
-        <label class="maydon"><span>Kod</span><textarea id="l-kod" rows="3" placeholder="Sotuvchi yuborgan kodni shu yerga qo‘ying" spellcheck="false" autocomplete="off" autocapitalize="none" style="font-family:ui-monospace,Consolas,monospace;word-break:break-all"></textarea></label>
-        <p class="xato" id="l-xato" hidden></p><button type="submit" class="btn btn-primary">Faollashtirish</button></form></section></div>`;
+        <div><span>${lh.tur === "faol" ? "Obuna" : "Sinov"} tugashi</span><b>${sanaMatn(lh.tugash)}${lh.qoldi !== null ? ` (${lh.qoldi < 0 ? "tugagan" : lh.qoldi + " kun qoldi"})` : ""}</b></div>
+        <div><span>Oxirgi tekshiruv</span><b>${oxirgi ? `${sanaMatn(sanaStr(oxirgi))}, ${pad2(oxirgi.getHours())}:${pad2(oxirgi.getMinutes())}` : "—"}</b></div></div>
+      <p class="muted sm" style="margin:0">Obunani uzaytirish uchun sotuvchiga murojaat qiling: ${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}. To‘lovdan keyin obuna avtomatik yangilanadi.</p>
+      <div class="amal-qator"><button class="btn btn-soft" data-act="obuna-yangila">${icon("refresh", 18)} Holatni yangilash</button></div></section>`;
   }
 
   if (t === "xodimlar") return h + bolimBosh("Har bir xodim o‘z logini va 8 xonali paroli bilan kiradi. Login avtomatik tuziladi, parolni siz berasiz. Lavozimiga qarab faqat ruxsat berilgan bo‘limlarni ko‘radi.", `<button class="btn btn-primary" data-act="xodim-yangi">${icon("plus", 18)} Xodim qo‘shish</button>`) + `
@@ -2481,7 +2462,8 @@ async function tikla(matn) {
     await Ombor.almashtir(x);
     if (!DB.xodimlar.length) { Sessiya.tugat(); Ilova.holat = "kirish"; UI.kirish.tab = "royxat"; }
     else if (!men()) { Sessiya.tugat(); Ilova.holat = "kirish"; UI.kirish.tab = "kirish"; }
-    UI.dav = null; UI.tf.oid = ""; render(); toast("Ma’lumotlar tiklandi");
+    UI.dav = null; UI.tf.oid = ""; Server.holat = "kutilmoqda"; render(); toast("Ma’lumotlar tiklandi");
+    Server.tekshir();
   } catch (e) { toast("Tiklashda xato: " + (e.message || e), "warn"); }
 }
 function csvMatn(q) {
@@ -2553,7 +2535,7 @@ const AMALLAR = {
     }
     try { await Ombor.almashtir(await demoDB()); } catch (e) { toast("Demo yuklanmadi: " + (e.message || e), "warn"); return; }
     const d = DB.xodimlar.find(x => x.rol === "direktor"), dd = DEMO_XODIMLAR.find(x => x.rol === "direktor");
-    Sessiya.qoy(d.id); UI.dav = null; UI.tf.oid = ""; Ilova.holat = "ichida";
+    Sessiya.qoy(d.id); UI.dav = null; UI.tf.oid = ""; Ilova.holat = "ichida"; Server.holat = "ok";
     ot("bosh"); toast(`Demo: direktor sifatida kirdingiz (login ${dd.login}, parol ${dd.parol})`);
   },
   "tozala": async () => {
@@ -2714,10 +2696,18 @@ const FORMALAR = {
     if (p1 !== p2) return xatoKorsat("#r-xato", "Parollar bir xil emas.");
     // Qurilmada boshqa markaz bo‘lsa, o‘chib ketmasin: zaxira nusxasi alohida saqlanadi (demo shunchaki almashtiriladi)
     if (markazBor()) Mahalliy.qoy(SOZLAMALAR.omborKaliti + "-arxiv", JSON.stringify(DB));
+    // Markaz serverda ro‘yxatdan o‘tadi (internet kerak): sotuvchi uni admin saytda ko‘radi
+    const tugma = $('#royxat-forma [type="submit"]'), tMatn = tugma.innerHTML;
+    tugma.disabled = true; tugma.textContent = "Ro‘yxatdan o‘tkazilmoqda…";
+    let j;
+    try { j = await Server.sorov("royxat", { nomi: nom, rahbar, tel, manzil: $("#r-manzil").value.trim(), hajm: $("#r-hajm").value, login, versiya: SOZLAMALAR.versiya }); }
+    catch (e) { j = { ok: false, xato: e.kod === "sozlanmagan" ? "Dastur serverga ulanmagan. Sotuvchiga murojaat qiling." : "Internet yo‘q yoki server javob bermadi. Internetni tekshirib, qayta urinib ko‘ring." }; }
+    if (!j.ok) { tugma.disabled = false; tugma.innerHTML = tMatn; return xatoKorsat("#r-xato", j.xato || "Ro‘yxatdan o‘tib bo‘lmadi."); }
     const db = boshDB();
     db.sozlamalar = { markazNomi: nom, markazTel: tel, manzil: $("#r-manzil").value.trim() };
-    db.litsenziya = { royxat: bugun(), sinovTugash: sanaQosh(bugun(), SOZLAMALAR.sinovKun), tugash: "",
+    db.litsenziya = { royxat: bugun(), sinovTugash: j.sinovTugash, tugash: j.tugash || "", markazId: j.id, token: j.token, holat: j.holat || "faol", xabar: j.xabar || "", tekshirildi: Date.now(),
       malumot: { rahbar, tel, manzil: $("#r-manzil").value.trim(), hajm: $("#r-hajm").value } };
+    Server.bugun = j.bugun || ""; Server.holat = "ok";
     db.xodimlar.push({ id: yangiId(), ism: rahbar, rol: "direktor", login, oqituvchiId: "", filialId: "", faol: true, pinXesh: await pinXesh(p1) });
     await Ombor.almashtir(db);
     // Avtomatik kirmaydi: «Kirish» oynasiga o‘tadi, login va parolni o‘zi yozadi
@@ -2729,12 +2719,6 @@ const FORMALAR = {
     if (!parolTogri(y)) return xatoKorsat("#p-xato", "Yangi parol aynan 8 ta raqam bo‘lsin.");
     if (y !== t) return xatoKorsat("#p-xato", "Yangi parollar bir xil emas.");
     Ombor.yoz("xodimlar", { ...m, pinXesh: await pinXesh(y) }); Modal.yop(); toast("Parol almashtirildi");
-  },
-  "litsenziya-forma": async () => {
-    const tugash = await kodTekshir($("#l-kod").value);
-    if (!tugash) return xatoKorsat("#l-xato", "Kod noto‘g‘ri yoki boshqa markaz uchun berilgan. Sotuvchiga murojaat qiling.");
-    if (tugash < bugun()) return xatoKorsat("#l-xato", `Bu kodning muddati ${sanaMatn(tugash)} da tugagan.`);
-    DB.litsenziya = { ...DB.litsenziya, tugash }; Ombor.sozYoz(); Modal.yop(); render(); toast(`Faollashtirildi: ${sanaMatn(tugash)} gacha`);
   },
   "lid-forma": f => {
     const ism = $("#l-ism").value.trim(), tel = $("#l-tel").value.trim();
@@ -3813,6 +3797,110 @@ document.addEventListener("change", e => {
 
 
 /* =====================================================================
+   13. MARKAZLAR SERVERI (Google Sheets + Apps Script)
+   Serverda faqat markaz kartasi: nomi, rahbar, telefon, holati va muddati.
+   O‘quvchi, to‘lov va boshqa ma’lumotlar shu qurilmada qoladi.
+   Dastur har ochilganda va ochiq turganda vaqti-vaqti bilan holatni so‘raydi:
+   bloklangan yoki muddati tugagan markaz ishlay olmaydi, internet bo‘lmasa ochilmaydi.
+   ===================================================================== */
+const Server = {
+  holat: "kutilmoqda",   // kutilmoqda | ok | internet | topilmadi | ulanmagan | sozlanmagan
+  bugun: "",             // server sanasi (qurilma soatini o‘zgartirib aldab bo‘lmasin)
+  xato: "",
+  taymer: null,
+  async sorov(amal, d = {}) {
+    if (!SOZLAMALAR.server) { const e = new Error("Server manzili sozlanmagan"); e.kod = "sozlanmagan"; throw e; }
+    const ac = new AbortController(), t = setTimeout(() => ac.abort(), 25000);
+    try {
+      // text/plain — brauzer qo‘shimcha (preflight) so‘rov yubormaydi, Apps Script shuni kutadi
+      const r = await fetch(SOZLAMALAR.server, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ amal, ...d }), signal: ac.signal, redirect: "follow" });
+      if (!r.ok) throw new Error("Server javobi: " + r.status);
+      return await r.json();
+    } finally { clearTimeout(t); }
+  },
+  qabul(j) {
+    const L = DB.litsenziya;
+    Object.assign(L, { holat: j.holat || "faol", sinovTugash: j.sinovTugash || L.sinovTugash || "", tugash: j.tugash || "", xabar: j.xabar || "", tekshirildi: Date.now() });
+    if (j.bugun) this.bugun = j.bugun;
+    Ombor.sozYoz();
+  },
+  stat() {
+    return { oquvchilar: DB.oquvchilar.filter(oquvchiFaol).length, guruhlar: DB.guruhlar.filter(g => g.holat !== "yopilgan").length, xodimlar: DB.xodimlar.length, versiya: SOZLAMALAR.versiya };
+  },
+  async tekshir() {
+    const oldin = this.holat + "|" + JSON.stringify(DB.litsenziya);
+    if (DB.meta.demo || !markazBor()) this.holat = "ok";
+    else if (!DB.litsenziya.markazId) this.holat = "ulanmagan";
+    else {
+      try {
+        const L = DB.litsenziya, j = await this.sorov("holat", { id: L.markazId, token: L.token, nomi: DB.sozlamalar.markazNomi, stat: this.stat() });
+        if (j.ok) { this.qabul(j); this.holat = "ok"; this.xato = ""; }
+        else if (j.kod === "topilmadi") this.holat = "topilmadi";
+        else { this.holat = "internet"; this.xato = j.xato || ""; }
+      } catch (e) { this.holat = e.kod === "sozlanmagan" ? "sozlanmagan" : "internet"; this.xato = e.name === "AbortError" ? "Server javob bermadi" : e.message || ""; }
+    }
+    // Holat o‘zgarmagan bo‘lsa, yozilayotgan maydonni buzmaslik uchun ehtiyotkor qayta chizish
+    if (oldin !== this.holat + "|" + JSON.stringify(DB.litsenziya)) { if (this.holat === "ok") rejaRender(); else render(); }
+  },
+  boshla() {
+    this.tekshir();
+    clearInterval(this.taymer);
+    this.taymer = setInterval(() => this.tekshir(), SOZLAMALAR.tekshirDaqiqa * 60000);
+    window.addEventListener("online", () => this.tekshir());
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && Date.now() - (DB.litsenziya.tekshirildi || 0) > 60000) this.tekshir();
+    });
+  },
+};
+const serverBugun = () => Server.bugun || bugun();
+
+// Server ruxsat bermaguncha ko‘rsatiladigan ekran (null — ruxsat bor)
+function serverEkran() {
+  if (DB.meta.demo || !markazBor()) return null;
+  const L = DB.litsenziya, h = litsenziyaHolati();
+  const aloqa = `<p class="muted sm" style="text-align:center;margin:0">${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}</p>`;
+  const zaxira = Ilova.holat === "ichida" && direktorMi() ? `<button type="button" class="btn btn-ghost btn-sm" data-act="zaxira">${icon("download", 16)} Zaxira olish</button>` : "";
+  const chiqish = Ilova.holat === "ichida" ? `<button type="button" class="btn btn-ghost btn-sm" data-act="chiqish">${icon("logout", 16)} Chiqish</button>` : "";
+  const oyna = (sarlavha, matn, tugmalar = "", turi = "") => `<div class="kirish"><div class="kirish-bosh"><div class="logo katta${turi === "xavf" ? " xavf" : ""}">${esc(markazLogo())}</div>
+      <h1>${sarlavha}</h1><p>${esc(markazNomi())}</p></div>
+    <section class="card forma">${matn}${tugmalar ? `<div class="amal-qator">${tugmalar}</div>` : ""}</section>${aloqa}</div>`;
+  const qayta = `<button type="button" class="btn btn-primary" data-act="server-qayta">${icon("refresh", 18)} Qayta urinish</button>`;
+
+  if (Server.holat === "kutilmoqda") return `<div class="kirish"><div class="kirish-bosh"><div class="logo katta">${esc(markazLogo())}</div><h1>${esc(markazNomi())}</h1>
+    <p class="yuklanmoqda"><span class="aylana" aria-hidden="true"></span> Tekshirilmoqda…</p></div></div>`;
+  if (Server.holat === "sozlanmagan") return oyna("Server ulanmagan", `<p class="muted" style="margin:0">Dastur markazlar serveriga ulanmagan. Sotuvchiga murojaat qiling.</p>`);
+  if (Server.holat === "internet") return oyna("Internetga ulaning", `<p class="muted" style="margin:0">Dastur ishlashi uchun internet kerak. Internetni yoqing va «Qayta urinish»ni bosing. Ma’lumotlaringiz saqlangan.</p>
+      ${Server.xato ? `<p class="muted sm" style="margin:0">Sabab: ${esc(Server.xato)}</p>` : ""}`, qayta + zaxira + chiqish);
+  if (Server.holat === "ulanmagan") return oyna("Markazni tizimga ulang", `<p class="muted" style="margin:0">Bu qurilmadagi markaz hali tizimda ro‘yxatdan o‘tmagan. Ulash uchun internet kerak, ma’lumotlaringiz o‘zgarmaydi.</p>
+      <p class="xato" id="ul-xato" hidden></p>`, `<button type="button" class="btn btn-primary" data-act="markaz-ulash">Tizimga ulash</button>` + chiqish);
+  if (Server.holat === "topilmadi") return oyna("Markaz topilmadi", `<p class="muted" style="margin:0">Bu markaz tizimda topilmadi yoki o‘chirilgan. Sotuvchiga murojaat qiling. Ma’lumotlaringiz shu qurilmada saqlangan.</p>`, qayta + zaxira + chiqish, "xavf");
+  if (h.bloklangan) return oyna("Markaz bloklangan", `<p class="muted" style="margin:0">Dasturdan foydalanish to‘xtatilgan. Ma’lumotlaringiz saqlangan: sotuvchi blokdan chiqargach, hammasi joyida bo‘ladi.</p>
+      ${L.xabar ? `<div class="info-quti"><span class="muted sm">Sotuvchidan xabar:</span><span class="matn">${esc(L.xabar)}</span></div>` : ""}`, qayta + zaxira + chiqish, "xavf");
+  if (h.tugagan) return oyna(h.tur === "faol" ? "Obuna muddati tugadi" : "Bepul sinov muddati tugadi", `<p class="muted" style="margin:0">${sanaMatn(h.tugash)} da tugagan. Davom ettirish uchun sotuvchiga murojaat qiling: to‘lovdan keyin dastur shu yerning o‘zida ochiladi. Ma’lumotlaringiz saqlangan.</p>
+      ${L.xabar ? `<div class="info-quti"><span class="muted sm">Sotuvchidan xabar:</span><span class="matn">${esc(L.xabar)}</span></div>` : ""}`, qayta + zaxira + chiqish, "xavf");
+  return null;
+}
+
+Object.assign(AMALLAR, {
+  "server-qayta": async el => { el.disabled = true; el.textContent = "Tekshirilmoqda…"; await Server.tekshir(); render(); },
+  // Avval serversiz ro‘yxatdan o‘tgan (yoki zaxiradan tiklangan) markazni tizimga ulash
+  "markaz-ulash": async el => {
+    const L = DB.litsenziya, m = L.malumot || {}, d = DB.xodimlar.find(x => x.rol === "direktor") || {};
+    el.disabled = true; el.textContent = "Ulanmoqda…";
+    try {
+      const j = await Server.sorov("royxat", { nomi: markazNomi(), rahbar: m.rahbar || d.ism || "", tel: m.tel || DB.sozlamalar.markazTel || "", manzil: m.manzil || DB.sozlamalar.manzil || "", hajm: m.hajm || "", login: d.login || "", versiya: SOZLAMALAR.versiya });
+      if (!j.ok) throw new Error(j.xato || "Server rad etdi");
+      Object.assign(L, { markazId: j.id, token: j.token }); Server.qabul(j); Server.holat = "ok"; render(); toast("Markaz tizimga ulandi");
+    } catch (e) {
+      el.disabled = false; el.textContent = "Tizimga ulash";
+      xatoKorsat("#ul-xato", /telefon/.test(e.message) ? "Telefon raqami kiritilmagan. Sozlamalarda markaz telefonini yozing yoki sotuvchiga murojaat qiling." : "Ulanib bo‘lmadi: " + (e.message || "internetni tekshiring"));
+    }
+  },
+  "obuna-yangila": async el => { el.disabled = true; await Server.tekshir(); render(); toast(Server.holat === "ok" ? "Holat yangilandi" : "Server bilan bog‘lanib bo‘lmadi", Server.holat === "ok" ? "ok" : "warn"); },
+});
+
+
+/* =====================================================================
    11. DEMO MA’LUMOTLAR (bugungi sanaga nisbatan yaratiladi)
    ===================================================================== */
 const DEMO_XODIMLAR = [
@@ -3975,6 +4063,7 @@ async function demoDB() {
   const h = location.hash.slice(1); if (BOLIMLAR[h]) UI.bolim = h;
   Ombor.yukla();
   Ilova.maLumotTayyor();
+  Server.boshla();
   // Sotuvchi taqdimoti uchun: fayl manzili oxiriga #demo qo‘shib ochilsa, namunaviy markaz yuklanadi
   if (location.hash === "#demo") { try { history.replaceState(null, "", "#bosh"); } catch (e) {} AMALLAR.demo(); }
 })();

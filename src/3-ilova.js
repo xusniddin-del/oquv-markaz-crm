@@ -94,10 +94,10 @@ function ot(b) {
 
 function render() {
   if (Ilova.holat === "ichida" && (!men() || men().faol === false)) { Sessiya.tugat(); Ilova.holat = "kirish"; }
-  const tugagan = Ilova.holat === "ichida" && litsenziyaHolati().tugagan;
-  document.body.classList.toggle("kirish-rejim", Ilova.holat !== "ichida" || tugagan);
+  const ekran = serverEkran();   // internet yo‘q, bloklangan yoki muddati tugagan bo‘lsa — kirish ham yopiq
+  document.body.classList.toggle("kirish-rejim", Ilova.holat !== "ichida" || !!ekran);
+  if (ekran) { $("#main").innerHTML = ekran; return; }
   if (Ilova.holat !== "ichida") { $("#main").innerHTML = renderKirish(); return; }
-  if (tugagan) { $("#main").innerHTML = renderMuddatTugadi(); return; }
   if (!BOLIMLAR[UI.bolim] || !mumkin(UI.bolim)) UI.bolim = "bosh";
   const k = UI.bolim, b = BOLIMLAR[k], m = men();
 
@@ -133,10 +133,12 @@ function render() {
 function renderBanner() {
   let h = "";
   const L = litsenziyaHolati();
-  if (direktorMi() && L.tur === "sinov" && L.qoldi <= SOZLAMALAR.sinovKun) h += `<div class="banner" role="status">${icon("gift")}<div class="b-mat"><b>Bepul sinov: ${L.qoldi === 0 ? "bugun oxirgi kun" : `${L.qoldi} kun qoldi`}.</b> ${sanaMatn(L.tugash)} gacha. Keyin davom ettirish uchun faollashtirish kodi kerak bo‘ladi.</div>
-    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Faollashtirish</button></div>`;
-  else if (direktorMi() && L.tur === "faol" && L.qoldi <= 7) h += `<div class="banner" role="status">${icon("alert")}<div class="b-mat"><b>Litsenziya ${L.qoldi === 0 ? "bugun" : `${L.qoldi} kundan keyin`} tugaydi</b> (${sanaMatn(L.tugash)}). Yangi kod oling.</div>
-    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Kod kiritish</button></div>`;
+  if (DB.litsenziya.xabar && !DB.meta.demo) h += `<div class="banner" role="status">${icon("message")}<div class="b-mat"><b>Sotuvchidan xabar:</b> ${esc(DB.litsenziya.xabar)}</div></div>`;
+  const aloqa = `Davom ettirish uchun sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : "."}`;
+  if (direktorMi() && !DB.meta.demo && L.tur === "sinov" && L.qoldi !== null && L.qoldi <= SOZLAMALAR.sinovKun) h += `<div class="banner" role="status">${icon("gift")}<div class="b-mat"><b>Bepul sinov: ${L.qoldi === 0 ? "bugun oxirgi kun" : `${L.qoldi} kun qoldi`}.</b> ${sanaMatn(L.tugash)} gacha. ${aloqa}</div>
+    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Obuna</button></div>`;
+  else if (direktorMi() && !DB.meta.demo && L.tur === "faol" && L.qoldi <= 7) h += `<div class="banner" role="status">${icon("alert")}<div class="b-mat"><b>Obuna ${L.qoldi === 0 ? "bugun" : `${L.qoldi} kundan keyin`} tugaydi</b> (${sanaMatn(L.tugash)}). ${aloqa}</div>
+    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Obuna</button></div>`;
   if (!Mahalliy.ishlaydi) h += `<div class="banner xavf" role="alert">${icon("alert")}<div class="b-mat"><b>Brauzer xotirasi ishlamayapti.</b> Ma’lumotlar sahifa yopilganda o‘chadi. Ishni tugatgach albatta zaxira oling.</div></div>`;
   if (direktorMi() && !UI.bannerYopildi && (OQ().length || GR().length)) {
     const z = DB.meta.oxirgiZaxira, kun = z ? kunFarqi(z, bugun()) : null;
@@ -207,22 +209,6 @@ function renderKirish() {
       <button type="submit" class="btn btn-primary btn-blok">${icon("gift", 20)} Ro‘yxatdan o‘tish</button>
       <p class="muted sm" style="margin:0">Login: kichik lotin harflar, raqam, nuqta yoki pastki chiziq. Xodimlarga login va parolni keyin dastur ichida o‘zingiz berasiz.</p>
     </form></section>${pas}</div>`;
-}
-// Sinov yoki litsenziya tugaganda: ma’lumot saqlanadi, kod kiritilgach davom etadi
-function renderMuddatTugadi() {
-  const L = DB.litsenziya, h = litsenziyaHolati();
-  return `<div class="kirish"><div class="kirish-bosh"><div class="logo katta">${esc(markazLogo())}</div>
-      <h1>${h.tur === "sinov" ? "Bepul sinov muddati tugadi" : "Litsenziya muddati tugadi"}</h1>
-      <p>${esc(markazNomi())} · ${sanaMatn(h.tugash)} da tugagan. Ma’lumotlaringiz saqlangan.</p></div>
-    <section class="card"><form id="litsenziya-forma" class="forma" novalidate>
-      <p class="muted sm" style="margin:0">Davom ettirish uchun sotuvchiga murojaat qiling va to‘lovdan keyin faollashtirish kodini oling.${L.malumot && L.malumot.tel ? ` Ro‘yxatdan o‘tgan telefoningiz: <b>${esc(L.malumot.tel)}</b>.` : ""}</p>
-      <label class="maydon"><span>Faollashtirish kodi</span><textarea id="l-kod" rows="3" placeholder="Sotuvchi yuborgan kodni shu yerga qo‘ying" spellcheck="false" autocomplete="off" autocapitalize="none" style="font-family:ui-monospace,Consolas,monospace;word-break:break-all"></textarea></label>
-      <p class="xato" id="l-xato" hidden></p>
-      <button type="submit" class="btn btn-primary btn-blok">Faollashtirish</button>
-      <div class="amal-qator">${direktorMi() ? `<button type="button" class="btn btn-ghost btn-sm" data-act="zaxira">${icon("download", 16)} Zaxira olish</button>` : ""}
-        <button type="button" class="btn btn-ghost btn-sm" data-act="chiqish">${icon("logout", 16)} Chiqish</button></div>
-    </form></section>
-    <p class="muted sm" style="text-align:center;margin:0">${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}</p></div>`;
 }
 async function kirishTekshir(login, parol) {
   const k = UI.kirish;

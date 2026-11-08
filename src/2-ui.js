@@ -41,6 +41,7 @@ const ICONS = {
   phone: "M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2",
   eye: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
   logout: "M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11",
+  refresh: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7",
   gift: "M4 10h16v11H4zM2.5 6.5h19V10h-19zM12 6.5V21M12 6.5c-1-3-5-3-5-.5 0 .5 1 .5 5 .5zM12 6.5c1-3 5-3 5-.5 0 .5-1 .5-5 .5z",
 };
 const icon = (n, s = 22) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n] || ICONS.grid}"/></svg>`;

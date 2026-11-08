@@ -230,3 +230,10 @@ pre.kod-blok { background: var(--surface-2); border: 1px solid var(--line); bord
 .banner.ok > .ic { color: var(--ok); }
 
 .yon-pas .versiya { display:block; padding: 6px 14px 0; font-size: 12px; }
+
+/* Server holati ekranlari */
+.yuklanmoqda { display:inline-flex; align-items:center; gap:10px; }
+.aylana { width:18px; height:18px; border-radius:50%; border:2.5px solid var(--line); border-top-color: var(--primary); animation: aylan .8s linear infinite; }
+@keyframes aylan { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .aylana { animation-duration: 2.4s; } }
+.logo.xavf { background: var(--bad, #C81E1E); }

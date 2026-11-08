@@ -162,6 +162,7 @@ async function demoDB() {
   const h = location.hash.slice(1); if (BOLIMLAR[h]) UI.bolim = h;
   Ombor.yukla();
   Ilova.maLumotTayyor();
+  Server.boshla();
   // Sotuvchi taqdimoti uchun: fayl manzili oxiriga #demo qo‘shib ochilsa, namunaviy markaz yuklanadi
   if (location.hash === "#demo") { try { history.replaceState(null, "", "#bosh"); } catch (e) {} AMALLAR.demo(); }
 })();

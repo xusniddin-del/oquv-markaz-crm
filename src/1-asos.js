@@ -35,8 +35,9 @@ const SOZLAMALAR = {
 
   // Dastur egasi (sotuvchi). Kirish va faollashtirish oynasida ko‘rinadi.
   sotuvchi: { nom: "O‘quv Markaz CRM", tel: "+998 90 841 02 20", telegram: "" },
-  // Faollashtirish kodini tekshiruvchi OCHIQ kalit (ECDSA P-256). Maxfiy kalit faqat sotuvchining generatorida.
-  litsenziyaKalit: "BOA8vLj8EIiDrOk0A5xKc3PQhchHCzU9Ku61zRF7uleypxHzpE1u1Y9RU4rS6yxBetxYzse5TAD6qsFiUuCLhCE",
+  // Markazlar serveri (Google Apps Script veb-ilova manzili). Bo‘sh bo‘lsa, ro‘yxat va tekshiruv ishlamaydi.
+  server: "",
+  tekshirDaqiqa: 10,             // dastur ochiq turganda holat shuncha daqiqada bir tekshiriladi
   telegramHavola: "https://t.me/share/url?text=",
 
   // Rollar qaysi bo‘limlarni ko‘radi ("*" = hammasi)
@@ -155,26 +156,13 @@ function loginYasa(ism, id = "", db = DB) {
 const parolYasa = () => { const a = new Uint32Array(8); try { crypto.getRandomValues(a); } catch (e) { a.forEach((_, i) => { a[i] = Math.random() * 1e9; }); } return [...a].map(x => x % 10).join("").replace(/^0/, "7"); };
 const parolTogri = p => /^\d{8}$/.test(p);               // xodim paroli: 8 xonali raqam
 const loginTogri = l => /^[a-z0-9][a-z0-9._-]{2,29}$/.test(l);  // kichik lotin harf, raqam, . _ -
-// Faollashtirish kodi markaz ro‘yxatdan o‘tgan telefon raqamiga bog‘lanadi (oxirgi 9 raqam).
-// Kod ko‘rinishi: YYMMDD-<raqamli imzo>. Imzoni faqat sotuvchi yarata oladi, dastur uni ochiq kalit bilan tekshiradi.
-const markazTelKalit = () => String((DB.litsenziya.malumot || {}).tel || DB.sozlamalar.markazTel || "").replace(/\D/g, "").slice(-9);
-const b64u = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), c => c.charCodeAt(0));
-async function kodTekshir(kod) {
-  const m = String(kod || "").replace(/\s/g, "").match(/^(\d{2})(\d{2})(\d{2})-([A-Za-z0-9_-]{80,90})$/);
-  const kalit = markazTelKalit();
-  if (!m || kalit.length < 9) return null;
-  const tugash = `20${m[1]}-${m[2]}-${m[3]}`;
-  try {
-    const k = await crypto.subtle.importKey("raw", b64u(SOZLAMALAR.litsenziyaKalit), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
-    const ok = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, k, b64u(m[4]), new TextEncoder().encode(`oquv-markaz-crm|${kalit}|${tugash}`));
-    return ok ? tugash : null;
-  } catch (e) { return null; }
-}
+// Markaz obunasi: ma’lumotni server beradi (holat, sinov va obuna muddati, server sanasi)
 function litsenziyaHolati() {
   const L = DB.litsenziya || {}, tugash = [L.sinovTugash, L.tugash].filter(Boolean).sort().pop() || "";
-  if (!L.royxat || !tugash) return { tur: "yoq", tugagan: false, qoldi: null, tugash: "" };
-  const qoldi = kunFarqi(bugun(), tugash);
-  return { tur: L.tugash && L.tugash >= (L.sinovTugash || "") ? "faol" : "sinov", tugash, qoldi, tugagan: qoldi < 0 };
+  if (!L.royxat) return { tur: "yoq", tugagan: false, qoldi: null, tugash: "" };
+  const qoldi = tugash ? kunFarqi(serverBugun(), tugash) : -1;
+  const tur = L.holat === "bloklangan" ? "bloklangan" : L.tugash && L.tugash >= (L.sinovTugash || "") ? "faol" : "sinov";
+  return { tur, tugash, qoldi, tugagan: qoldi < 0, bloklangan: L.holat === "bloklangan" };
 }
 
 /* =====================================================================
@@ -191,7 +179,7 @@ function boshDB() {
     versiya: 3,
     sozlamalar: { markazNomi: "", markazTel: "", manzil: "" },
     xodimlar: [],      // {id, ism, rol (lavozim), login, pinXesh (parol xeshi), oqituvchiId, filialId, faol}
-    litsenziya: { royxat: "", sinovTugash: "", tugash: "", malumot: {} },   // malumot.tel — faollashtirish kaliti
+    litsenziya: { royxat: "", sinovTugash: "", tugash: "", malumot: {}, markazId: "", token: "", holat: "faol", xabar: "" },   // server bilan bog‘lanish
     oqituvchilar: [],  // {id, ism, tel, fan, oylikTuri, stavka, foizAsosi, izoh, faol}
     xonalar: [],       // {id, nomi, sigim}
     guruhlar: [],      // {id, nomi, fan, oqituvchiId, xonaId, kunlar, boshlanish, tugash, narxTuri, narx, holat, ochilgan}

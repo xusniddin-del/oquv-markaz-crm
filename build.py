@@ -4,7 +4,7 @@ import pathlib, re, sys
 root = pathlib.Path(__file__).parent
 src = root / "src"
 css = (src / "style-v1.css").read_text(encoding="utf-8") + (src / "style-v2.css").read_text(encoding="utf-8")
-js = "\n".join((src / f).read_text(encoding="utf-8") for f in ["1-asos.js", "2-ui.js", "3-ilova.js", "4-bolimlar.js", "5-moliya.js", "6-hodisalar.js", "8-yangi.js", "7-demo.js"])
+js = "\n".join((src / f).read_text(encoding="utf-8") for f in ["1-asos.js", "2-ui.js", "3-ilova.js", "4-bolimlar.js", "5-moliya.js", "6-hodisalar.js", "8-yangi.js", "9-server.js", "7-demo.js"])
 head = """<title>O‘quv Markaz CRM</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#2563EB">

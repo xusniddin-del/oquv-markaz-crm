@@ -43,7 +43,7 @@ const AMALLAR = {
     }
     try { await Ombor.almashtir(await demoDB()); } catch (e) { toast("Demo yuklanmadi: " + (e.message || e), "warn"); return; }
     const d = DB.xodimlar.find(x => x.rol === "direktor"), dd = DEMO_XODIMLAR.find(x => x.rol === "direktor");
-    Sessiya.qoy(d.id); UI.dav = null; UI.tf.oid = ""; Ilova.holat = "ichida";
+    Sessiya.qoy(d.id); UI.dav = null; UI.tf.oid = ""; Ilova.holat = "ichida"; Server.holat = "ok";
     ot("bosh"); toast(`Demo: direktor sifatida kirdingiz (login ${dd.login}, parol ${dd.parol})`);
   },
   "tozala": async () => {
@@ -204,10 +204,18 @@ const FORMALAR = {
     if (p1 !== p2) return xatoKorsat("#r-xato", "Parollar bir xil emas.");
     // Qurilmada boshqa markaz bo‘lsa, o‘chib ketmasin: zaxira nusxasi alohida saqlanadi (demo shunchaki almashtiriladi)
     if (markazBor()) Mahalliy.qoy(SOZLAMALAR.omborKaliti + "-arxiv", JSON.stringify(DB));
+    // Markaz serverda ro‘yxatdan o‘tadi (internet kerak): sotuvchi uni admin saytda ko‘radi
+    const tugma = $('#royxat-forma [type="submit"]'), tMatn = tugma.innerHTML;
+    tugma.disabled = true; tugma.textContent = "Ro‘yxatdan o‘tkazilmoqda…";
+    let j;
+    try { j = await Server.sorov("royxat", { nomi: nom, rahbar, tel, manzil: $("#r-manzil").value.trim(), hajm: $("#r-hajm").value, login, versiya: SOZLAMALAR.versiya }); }
+    catch (e) { j = { ok: false, xato: e.kod === "sozlanmagan" ? "Dastur serverga ulanmagan. Sotuvchiga murojaat qiling." : "Internet yo‘q yoki server javob bermadi. Internetni tekshirib, qayta urinib ko‘ring." }; }
+    if (!j.ok) { tugma.disabled = false; tugma.innerHTML = tMatn; return xatoKorsat("#r-xato", j.xato || "Ro‘yxatdan o‘tib bo‘lmadi."); }
     const db = boshDB();
     db.sozlamalar = { markazNomi: nom, markazTel: tel, manzil: $("#r-manzil").value.trim() };
-    db.litsenziya = { royxat: bugun(), sinovTugash: sanaQosh(bugun(), SOZLAMALAR.sinovKun), tugash: "",
+    db.litsenziya = { royxat: bugun(), sinovTugash: j.sinovTugash, tugash: j.tugash || "", markazId: j.id, token: j.token, holat: j.holat || "faol", xabar: j.xabar || "", tekshirildi: Date.now(),
       malumot: { rahbar, tel, manzil: $("#r-manzil").value.trim(), hajm: $("#r-hajm").value } };
+    Server.bugun = j.bugun || ""; Server.holat = "ok";
     db.xodimlar.push({ id: yangiId(), ism: rahbar, rol: "direktor", login, oqituvchiId: "", filialId: "", faol: true, pinXesh: await pinXesh(p1) });
     await Ombor.almashtir(db);
     // Avtomatik kirmaydi: «Kirish» oynasiga o‘tadi, login va parolni o‘zi yozadi
@@ -219,12 +227,6 @@ const FORMALAR = {
     if (!parolTogri(y)) return xatoKorsat("#p-xato", "Yangi parol aynan 8 ta raqam bo‘lsin.");
     if (y !== t) return xatoKorsat("#p-xato", "Yangi parollar bir xil emas.");
     Ombor.yoz("xodimlar", { ...m, pinXesh: await pinXesh(y) }); Modal.yop(); toast("Parol almashtirildi");
-  },
-  "litsenziya-forma": async () => {
-    const tugash = await kodTekshir($("#l-kod").value);
-    if (!tugash) return xatoKorsat("#l-xato", "Kod noto‘g‘ri yoki boshqa markaz uchun berilgan. Sotuvchiga murojaat qiling.");
-    if (tugash < bugun()) return xatoKorsat("#l-xato", `Bu kodning muddati ${sanaMatn(tugash)} da tugagan.`);
-    DB.litsenziya = { ...DB.litsenziya, tugash }; Ombor.sozYoz(); Modal.yop(); render(); toast(`Faollashtirildi: ${sanaMatn(tugash)} gacha`);
   },
   "lid-forma": f => {
     const ism = $("#l-ism").value.trim(), tel = $("#l-tel").value.trim();
