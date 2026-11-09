@@ -718,6 +718,18 @@ pre.kod-blok { background: var(--surface-2); border: 1px solid var(--line); bord
 @keyframes aylan { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .aylana { animation-duration: 2.4s; } }
 .logo.xavf { background: var(--bad, #C81E1E); }
+
+/* Tariflar */
+.tariflar { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; }
+.tarif { display:flex; flex-direction:column; gap:4px; text-align:left; padding:14px; border-radius:14px; border:2px solid var(--line); background: var(--surface); cursor:pointer; color: var(--text); font: inherit; min-width:0; }
+.tarif:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--line)); }
+.tarif.tanlangan { border-color: var(--primary); background: var(--primary-soft); }
+.tarif .t-nom { font-weight:700; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.tarif .t-narx { font-size:22px; font-weight:700; font-variant-numeric: tabular-nums; }
+.tarif .t-narx small { font-size:13px; font-weight:500; color: var(--muted); }
+.tarif .t-shart { font-size:13px; color: var(--muted); }
+.tarif .t-ogoh { font-size:12px; color: var(--warn); font-weight:600; }
+.btn-katta { min-height:52px; font-size:16px; width:100%; }
 </style>
 </head>
 <body>
@@ -742,7 +754,7 @@ pre.kod-blok { background: var(--surface-2); border: 1px solid var(--line); bord
    ===================================================================== */
 const SOZLAMALAR = {
   dasturNomi: "O‘quv Markaz CRM",
-  versiya: "1.0.0",              // har yangi versiyada oshiriladi (CHANGELOG.md)
+  versiya: "1.1.0",              // har yangi versiyada oshiriladi (CHANGELOG.md)
   markazNomi: "Bilim o‘quv markazi",     // dastur ichida «Sozlamalar»dan ham o‘zgartiriladi
   markazTel: "+998 90 000 00 00",
   logoMatni: "OM",
@@ -1535,11 +1547,11 @@ function renderBanner() {
   let h = "";
   const L = litsenziyaHolati();
   if (DB.litsenziya.xabar && !DB.meta.demo) h += `<div class="banner" role="status">${icon("message")}<div class="b-mat"><b>Sotuvchidan xabar:</b> ${esc(DB.litsenziya.xabar)}</div></div>`;
-  const aloqa = `Davom ettirish uchun sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : "."}`;
+  const aloqa = DB.litsenziya.tolovYoqilgan ? "Davom ettirish uchun tarif tanlab to‘lang." : `Davom ettirish uchun sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : "."}`;
   if (direktorMi() && !DB.meta.demo && L.tur === "sinov" && L.qoldi !== null && L.qoldi <= SOZLAMALAR.sinovKun) h += `<div class="banner" role="status">${icon("gift")}<div class="b-mat"><b>Bepul sinov: ${L.qoldi === 0 ? "bugun oxirgi kun" : `${L.qoldi} kun qoldi`}.</b> ${sanaMatn(L.tugash)} gacha. ${aloqa}</div>
-    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Obuna</button></div>`;
+    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Tarif tanlash</button></div>`;
   else if (direktorMi() && !DB.meta.demo && L.tur === "faol" && L.qoldi <= 7) h += `<div class="banner" role="status">${icon("alert")}<div class="b-mat"><b>Obuna ${L.qoldi === 0 ? "bugun" : `${L.qoldi} kundan keyin`} tugaydi</b> (${sanaMatn(L.tugash)}). ${aloqa}</div>
-    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Obuna</button></div>`;
+    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Uzaytirish</button></div>`;
   if (!Mahalliy.ishlaydi) h += `<div class="banner xavf" role="alert">${icon("alert")}<div class="b-mat"><b>Brauzer xotirasi ishlamayapti.</b> Ma’lumotlar sahifa yopilganda o‘chadi. Ishni tugatgach albatta zaxira oling.</div></div>`;
   if (direktorMi() && !UI.bannerYopildi && (OQ().length || GR().length)) {
     const z = DB.meta.oxirgiZaxira, kun = z ? kunFarqi(z, bugun()) : null;
@@ -2356,11 +2368,13 @@ function renderSozlamalar() {
     const L = DB.litsenziya, lh = litsenziyaHolati(), oxirgi = L.tekshirildi ? new Date(L.tekshirildi) : null;
     return h + `<section class="card forma" style="max-width:640px"><div class="card-h" style="margin:0"><h2>Obuna</h2>${lh.tur === "faol" ? `<span class="pill ok">Faol</span>` : lh.tur === "sinov" ? `<span class="pill warn">Bepul sinov</span>` : lh.tur === "bloklangan" ? `<span class="pill bad">Bloklangan</span>` : ""}</div>
       <div class="kredit"><div><span>Ro‘yxatdagi telefon</span><b>${esc((L.malumot || {}).tel || DB.sozlamalar.markazTel || "—")}</b></div>
+        <div><span>Tarif</span><b>${esc((tariflar().find(t => t.k === L.tarif) || {}).nom || (lh.tur === "sinov" ? "Bepul sinov (cheklovsiz)" : "—"))}${tarifJoriy() && tarifJoriy().limit ? ` · ${DB.oquvchilar.filter(oquvchiFaol).length}/${tarifJoriy().limit} ${T.oquvchi}` : ""}</b></div>
         <div><span>Ro‘yxatdan o‘tgan</span><b>${sanaMatn(L.royxat)}</b></div>
         <div><span>${lh.tur === "faol" ? "Obuna" : "Sinov"} tugashi</span><b>${sanaMatn(lh.tugash)}${lh.qoldi !== null ? ` (${lh.qoldi < 0 ? "tugagan" : lh.qoldi + " kun qoldi"})` : ""}</b></div>
         <div><span>Oxirgi tekshiruv</span><b>${oxirgi ? `${sanaMatn(sanaStr(oxirgi))}, ${pad2(oxirgi.getHours())}:${pad2(oxirgi.getMinutes())}` : "—"}</b></div></div>
-      <p class="muted sm" style="margin:0">Obunani uzaytirish uchun sotuvchiga murojaat qiling: ${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}. To‘lovdan keyin obuna avtomatik yangilanadi.</p>
-      <div class="amal-qator"><button class="btn btn-soft" data-act="obuna-yangila">${icon("refresh", 18)} Holatni yangilash</button></div></section>`;
+      <p class="muted sm" style="margin:0">Savollar bo‘lsa: ${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}.</p>
+      <div class="amal-qator"><button class="btn btn-soft" data-act="obuna-yangila">${icon("refresh", 18)} Holatni yangilash</button></div></section>
+      <section class="card forma" style="max-width:860px"><div class="card-h" style="margin:0"><h2>Tarif tanlash va to‘lash</h2></div>${tarifTanlov()}</section>`;
   }
 
   if (t === "xodimlar") return h + bolimBosh("Har bir xodim o‘z logini va 8 xonali paroli bilan kiradi. Login avtomatik tuziladi, parolni siz berasiz. Lavozimiga qarab faqat ruxsat berilgan bo‘limlarni ko‘radi.", `<button class="btn btn-primary" data-act="xodim-yangi">${icon("plus", 18)} Xodim qo‘shish</button>`) + `
@@ -2535,7 +2549,7 @@ const AMALLAR = {
     }
     try { await Ombor.almashtir(await demoDB()); } catch (e) { toast("Demo yuklanmadi: " + (e.message || e), "warn"); return; }
     const d = DB.xodimlar.find(x => x.rol === "direktor"), dd = DEMO_XODIMLAR.find(x => x.rol === "direktor");
-    Sessiya.qoy(d.id); UI.dav = null; UI.tf.oid = ""; Ilova.holat = "ichida"; Server.holat = "ok";
+    Sessiya.qoy(d.id); UI.dav = null; UI.tf.oid = ""; Ilova.holat = "ichida"; Server.holat = "ok"; setTimeout(() => Server.tekshir(), 50);
     ot("bosh"); toast(`Demo: direktor sifatida kirdingiz (login ${dd.login}, parol ${dd.parol})`);
   },
   "tozala": async () => {
@@ -2706,7 +2720,8 @@ const FORMALAR = {
     const db = boshDB();
     db.sozlamalar = { markazNomi: nom, markazTel: tel, manzil: $("#r-manzil").value.trim() };
     db.litsenziya = { royxat: bugun(), sinovTugash: j.sinovTugash, tugash: j.tugash || "", markazId: j.id, token: j.token, holat: j.holat || "faol", xabar: j.xabar || "", tekshirildi: Date.now(),
-      malumot: { rahbar, tel, manzil: $("#r-manzil").value.trim(), hajm: $("#r-hajm").value } };
+      malumot: { rahbar, tel, manzil: $("#r-manzil").value.trim(), hajm: $("#r-hajm").value },
+      tarif: j.tarif || "", tolovYoqilgan: !!j.tolovYoqilgan, kutilayotgan: 0, ...(j.tariflar ? { tariflar: j.tariflar } : {}), ...(j.oylar ? { oylar: j.oylar } : {}) };
     Server.bugun = j.bugun || ""; Server.holat = "ok";
     db.xodimlar.push({ id: yangiId(), ism: rahbar, rol: "direktor", login, oqituvchiId: "", filialId: "", faol: true, pinXesh: await pinXesh(p1) });
     await Ombor.almashtir(db);
@@ -2737,6 +2752,7 @@ const FORMALAR = {
     else {
       const gid = $("#o-guruh").value;
       if (!gid) return xatoKorsat("#o-xato", `${katta(T.guruh)}ni tanlang.`);
+      const lx = limitXato(1); if (lx) return xatoKorsat("#o-xato", lx);
       o = Ombor.yoz("oquvchilar", { id: yangiId(), yaratildi: Date.now(), filialId: (guruh(gid) || {}).filialId || joriyFilial(), ...d, azolik: [{ guruhId: gid, qoshilgan: $("#o-sana").value || bugun(), chiqqan: "", ...chegirmaQiymat($("#o-chegirma").value) }] });
       const lid = f.dataset.lid && DB.lidlar.find(x => x.id === f.dataset.lid);
       if (lid) Ombor.yoz("lidlar", { ...lid, holat: "yozildi", oquvchiId: o.id });
@@ -2748,6 +2764,7 @@ const FORMALAR = {
     const o = oquvchi(f.dataset.oid); if (!o) return;
     const y = toza(o), cheg = chegirmaQiymat($("#a-cheg").value), qosh = $("#a-qosh").value || bugun();
     if (f.dataset.i === "") {
+      const lx = !oquvchiFaol(o) && limitXato(1); if (lx) { Modal.yop(); return tarifLimitOyna(lx); }
       const gid = $("#a-guruh").value;
       if (!gid) return xatoKorsat("#a-xato", `Bo‘sh ${T.guruh} yo‘q yoki tanlanmagan.`);
       y.azolik.push({ guruhId: gid, qoshilgan: qosh, chiqqan: "", ...cheg });
@@ -3666,6 +3683,8 @@ Object.assign(AMALLAR, {
   "import": () => $("#fayl-import").click(),
   "import-tasdiq": () => {
     const l = UI.importlar || [], och = $("#imp-guruh") && $("#imp-guruh").checked;
+    const lx = limitXato(l.filter(x => x.guruhId || (och && x.guruhNomi)).length);
+    if (lx) return xatoKorsat("#imp-xato", lx);
     if (och) {
       const narx = raqam($("#imp-narx").value);
       if (!narx) return xatoKorsat("#imp-xato", `Yangi ${T.guruhlar} uchun oylik narxni kiriting.`);
@@ -3757,6 +3776,8 @@ Object.assign(FORMALAR, {
   },
   "filial-forma": f => {
     const nomi = $("#f-nom").value.trim(); if (!nomi) return xatoKorsat("#f-xato", "Filial nomini kiriting.");
+    const tj = tarifJoriy();
+    if (!f.dataset.id && tj && !tj.filial && DB.filiallar.length >= 1) return xatoKorsat("#f-xato", `${tj.nom} tarifida bitta filial bo‘ladi. Bir nechta filial uchun Premium tarifga o‘ting (Sozlamalar → Obuna).`);
     const fl = Ombor.yoz("filiallar", { ...(f.dataset.id ? byId("filiallar").get(f.dataset.id) : { id: yangiId() }), nomi, manzil: $("#f-manzil").value.trim(), tel: $("#f-tel").value.trim() });
     const h = $("#f-hammasi");
     if (h && h.checked) { DB.guruhlar.filter(g => !g.filialId).forEach(g => Ombor.yoz("guruhlar", { ...g, filialId: fl.id })); }
@@ -3820,7 +3841,10 @@ const Server = {
   },
   qabul(j) {
     const L = DB.litsenziya;
-    Object.assign(L, { holat: j.holat || "faol", sinovTugash: j.sinovTugash || L.sinovTugash || "", tugash: j.tugash || "", xabar: j.xabar || "", tekshirildi: Date.now() });
+    Object.assign(L, { holat: j.holat || "faol", sinovTugash: j.sinovTugash || L.sinovTugash || "", tugash: j.tugash || "", xabar: j.xabar || "", tekshirildi: Date.now(),
+      tarif: j.tarif || "", kutilayotgan: +j.kutilayotgan || 0, tolovYoqilgan: !!j.tolovYoqilgan });
+    if (Array.isArray(j.tariflar) && j.tariflar.length) L.tariflar = j.tariflar;
+    if (Array.isArray(j.oylar) && j.oylar.length) L.oylar = j.oylar;
     if (j.bugun) this.bugun = j.bugun;
     Ombor.sozYoz();
   },
@@ -3843,6 +3867,10 @@ const Server = {
     if (oldin !== this.holat + "|" + JSON.stringify(DB.litsenziya)) { if (this.holat === "ok") rejaRender(); else render(); }
   },
   boshla() {
+    if (location.hash === "#tolov") {
+      try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+      if (DB.litsenziya.markazId && !DB.meta.demo) { toast("To‘lov tekshirilmoqda…"); tolovKut(12); }
+    }
     this.tekshir();
     clearInterval(this.taymer);
     this.taymer = setInterval(() => this.tekshir(), SOZLAMALAR.tekshirDaqiqa * 60000);
@@ -3876,8 +3904,9 @@ function serverEkran() {
   if (Server.holat === "topilmadi") return oyna("Markaz topilmadi", `<p class="muted" style="margin:0">Bu markaz tizimda topilmadi yoki o‘chirilgan. Sotuvchiga murojaat qiling. Ma’lumotlaringiz shu qurilmada saqlangan.</p>`, qayta + zaxira + chiqish, "xavf");
   if (h.bloklangan) return oyna("Markaz bloklangan", `<p class="muted" style="margin:0">Dasturdan foydalanish to‘xtatilgan. Ma’lumotlaringiz saqlangan: sotuvchi blokdan chiqargach, hammasi joyida bo‘ladi.</p>
       ${L.xabar ? `<div class="info-quti"><span class="muted sm">Sotuvchidan xabar:</span><span class="matn">${esc(L.xabar)}</span></div>` : ""}`, qayta + zaxira + chiqish, "xavf");
-  if (h.tugagan) return oyna(h.tur === "faol" ? "Obuna muddati tugadi" : "Bepul sinov muddati tugadi", `<p class="muted" style="margin:0">${sanaMatn(h.tugash)} da tugagan. Davom ettirish uchun sotuvchiga murojaat qiling: to‘lovdan keyin dastur shu yerning o‘zida ochiladi. Ma’lumotlaringiz saqlangan.</p>
-      ${L.xabar ? `<div class="info-quti"><span class="muted sm">Sotuvchidan xabar:</span><span class="matn">${esc(L.xabar)}</span></div>` : ""}`, qayta + zaxira + chiqish, "xavf");
+  if (h.tugagan) return oyna(h.tur === "faol" ? "Obuna muddati tugadi" : "Bepul sinov muddati tugadi", `<p class="muted" style="margin:0">${sanaMatn(h.tugash)} da tugagan. Davom ettirish uchun tarif tanlab to‘lang: to‘lovdan keyin dastur shu yerning o‘zida ochiladi. Ma’lumotlaringiz saqlangan.</p>
+      ${L.xabar ? `<div class="info-quti"><span class="muted sm">Sotuvchidan xabar:</span><span class="matn">${esc(L.xabar)}</span></div>` : ""}
+      ${tarifTanlov()}`, `<button type="button" class="btn btn-ghost btn-sm" data-act="server-qayta">${icon("refresh", 16)} Qayta tekshirish</button>` + zaxira + chiqish, "xavf");
   return null;
 }
 
@@ -3898,6 +3927,98 @@ Object.assign(AMALLAR, {
   },
   "obuna-yangila": async el => { el.disabled = true; await Server.tekshir(); render(); toast(Server.holat === "ok" ? "Holat yangilandi" : "Server bilan bog‘lanib bo‘lmadi", Server.holat === "ok" ? "ok" : "warn"); },
 });
+
+/* ---------- Tariflar va obuna to‘lovi (TezCheck: Click, Payme, Uzcard/Humo) ---------- */
+// Server tariflarni har tekshiruvda yuboradi; bu — server javobi kelguncha ishlatiladigan nusxa
+const TARIFLAR_STD = [
+  { k: "start", nom: "Start", narx: 100000, limit: 100, filial: false },
+  { k: "standart", nom: "Standart", narx: 150000, limit: 300, filial: false },
+  { k: "premium", nom: "Premium", narx: 200000, limit: 0, filial: true },
+];
+const tariflar = () => DB.litsenziya.tariflar || TARIFLAR_STD;
+// Joriy tarif cheklovi: bepul sinovda va demoda cheklov yo‘q
+function tarifJoriy() {
+  const L = DB.litsenziya;
+  if (DB.meta.demo || !L.tarif || litsenziyaHolati().tur !== "faol") return null;
+  return tariflar().find(t => t.k === L.tarif) || null;
+}
+function limitXato(qoshiladi) {
+  const t = tarifJoriy();
+  if (!t || !t.limit) return "";
+  const bor = DB.oquvchilar.filter(oquvchiFaol).length;
+  if (bor + qoshiladi <= t.limit) return "";
+  return `${t.nom} tarifida ${t.limit} tagacha faol ${T.oquvchi} bo‘ladi (hozir ${bor} ta). Ko‘proq ${T.oquvchi} uchun tarifni oshiring: Sozlamalar → Obuna.`;
+}
+function tarifLimitOyna(matn) {
+  Modal.och(`<div class="forma"><h2 class="sheet-h">Tarif chegarasi</h2><p class="muted" style="margin:0">${esc(matn)}</p>
+    <div class="sheet-actions"><button type="button" class="btn btn-ghost" data-act="modal-yop">Yopish</button>
+    ${direktorMi() ? `<button type="button" class="btn btn-primary" data-act="litsenziya-och">Tarifni oshirish</button>` : ""}</div></div>`);
+}
+const tolovUI = () => (UI.tolov = UI.tolov || { tarif: DB.litsenziya.tarif || "standart", oylar: 1, kutish: false });
+
+// Tarif kartalari + muddat + «To‘lash» (Obuna sahifasida va muddat tugagan oynada)
+function tarifTanlov() {
+  const L = DB.litsenziya, u = tolovUI(), tl = tariflar(), oylar = L.oylar || [1, 3, 6, 12];
+  if (!tl.some(t => t.k === u.tarif)) u.tarif = tl[0].k;
+  const tanl = tl.find(t => t.k === u.tarif), jami = tanl.narx * u.oylar;
+  const faolSon = DB.oquvchilar.filter(oquvchiFaol).length;
+  const kartalar = tl.map(t => {
+    const sigmaydi = t.limit && faolSon > t.limit;
+    return `<button type="button" class="tarif${t.k === u.tarif ? " tanlangan" : ""}" data-act="tolov-tarif" data-k="${t.k}" aria-pressed="${t.k === u.tarif}">
+      <span class="t-nom">${esc(t.nom)}${L.tarif === t.k && litsenziyaHolati().tur === "faol" ? ` <span class="pill ok">Joriy</span>` : ""}</span>
+      <span class="t-narx">${pulS(t.narx)}<small> / oy</small></span>
+      <span class="t-shart">${t.limit ? `${t.limit} tagacha ${T.oquvchi}` : `Cheksiz ${T.oquvchilar}`}</span>
+      <span class="t-shart">${t.filial ? "Bir nechta filial" : "Bitta filial"} · barcha bo‘limlar</span>
+      ${sigmaydi ? `<span class="t-ogoh">Sizda ${faolSon} ta faol ${T.oquvchi} bor</span>` : ""}</button>`;
+  }).join("");
+  const kutish = L.kutilayotgan > 0 ? `<div class="info-quti"><span class="matn"><b>To‘lov tekshirilmoqda.</b> To‘lagan bo‘lsangiz, bir necha daqiqada obuna o‘zi yangilanadi.</span>
+    <button type="button" class="btn btn-soft btn-sm" data-act="tolov-tekshir">${icon("refresh", 16)} Tekshirish</button></div>` : "";
+  if (!L.tolovYoqilgan) return `<div class="tariflar">${kartalar}</div>${kutish}<p class="muted sm" style="margin:0">To‘lov uchun sotuvchiga murojaat qiling: ${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}.</p>`;
+  return `<div class="tariflar">${kartalar}</div>
+    <div class="maydon"><span>Muddat</span><div class="seg" role="group" aria-label="Muddat">${oylar.map(n => `<button type="button" data-act="tolov-oy" data-n="${n}" aria-pressed="${n === u.oylar}">${n === 12 ? "1 yil" : n + " oy"}</button>`).join("")}</div></div>
+    ${kutish}<p class="xato" id="tl-xato" hidden></p>
+    <button type="button" class="btn btn-primary btn-katta" data-act="tolov-boshla" ${u.kutish ? "disabled" : ""}>${u.kutish ? "To‘lov sahifasi ochilmoqda…" : `To‘lash — ${pulS(jami)}`}</button>
+    <p class="muted sm" style="margin:0;text-align:center">Click, Payme yoki Uzcard/Humo karta orqali. To‘lovdan keyin obuna avtomatik uzayadi${litsenziyaHolati().tugash && !litsenziyaHolati().tugagan ? ` (${sanaMatn(litsenziyaHolati().tugash)} dan keyin)` : ""}.</p>`;
+}
+
+Object.assign(AMALLAR, {
+  "tolov-tarif": el => { tolovUI().tarif = el.dataset.k; render(); },
+  "tolov-oy": el => { tolovUI().oylar = +el.dataset.n; render(); },
+  "tolov-boshla": async () => {
+    const u = tolovUI(), L = DB.litsenziya;
+    u.kutish = true; render();
+    try {
+      const j = await Server.sorov("tolov_yarat", { id: L.markazId, token: L.token, tarif: u.tarif, oylar: u.oylar });
+      if (!j.ok || !j.havola) throw new Error(j.xato || "To‘lov havolasi olinmadi");
+      L.kutilayotgan = Math.max(1, +L.kutilayotgan || 0); Ombor.sozYoz();
+      location.href = j.havola;   // TezCheck to‘lov sahifasi; to‘lovdan keyin #tolov bilan qaytadi
+    } catch (e) {
+      u.kutish = false; render();
+      xatoKorsat("#tl-xato", e.name === "TypeError" ? "Internet yo‘q yoki server javob bermadi." : e.message);
+    }
+  },
+  "tolov-tekshir": async el => { if (el) { el.disabled = true; } await tolovKut(1); },
+});
+
+// To‘lov sahifasidan qaytganda (#tolov) yoki «Tekshirish»da: to‘lov tushguncha bir necha marta so‘raydi
+async function tolovKut(marta = 12) {
+  const L = DB.litsenziya, oldin = L.tugash + "|" + L.tarif;
+  for (let i = 0; i < marta; i++) {
+    try {
+      const j = await Server.sorov("tolov_tekshir", { id: L.markazId, token: L.token });
+      if (j.ok) { Server.qabul(j); Server.holat = "ok"; }
+    } catch (e) {}
+    if (L.tugash + "|" + L.tarif !== oldin) {
+      const t = tariflar().find(x => x.k === L.tarif);
+      render(); toast(`To‘lov qabul qilindi! ${t ? t.nom + " tarifi, " : ""}obuna ${sanaMatn(L.tugash)} gacha`, "ok"); return true;
+    }
+    if (!L.kutilayotgan) break;
+    if (i < marta - 1) await new Promise(r => setTimeout(r, 5000));
+  }
+  render();
+  if (marta === 1) toast(L.kutilayotgan ? "To‘lov hali tushmagan. Bir ozdan keyin yana tekshiring." : "Kutilayotgan to‘lov yo‘q", "warn");
+  return false;
+}
 
 
 /* =====================================================================

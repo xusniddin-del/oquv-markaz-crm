@@ -768,6 +768,8 @@ Object.assign(AMALLAR, {
   "import": () => $("#fayl-import").click(),
   "import-tasdiq": () => {
     const l = UI.importlar || [], och = $("#imp-guruh") && $("#imp-guruh").checked;
+    const lx = limitXato(l.filter(x => x.guruhId || (och && x.guruhNomi)).length);
+    if (lx) return xatoKorsat("#imp-xato", lx);
     if (och) {
       const narx = raqam($("#imp-narx").value);
       if (!narx) return xatoKorsat("#imp-xato", `Yangi ${T.guruhlar} uchun oylik narxni kiriting.`);
@@ -859,6 +861,8 @@ Object.assign(FORMALAR, {
   },
   "filial-forma": f => {
     const nomi = $("#f-nom").value.trim(); if (!nomi) return xatoKorsat("#f-xato", "Filial nomini kiriting.");
+    const tj = tarifJoriy();
+    if (!f.dataset.id && tj && !tj.filial && DB.filiallar.length >= 1) return xatoKorsat("#f-xato", `${tj.nom} tarifida bitta filial bo‘ladi. Bir nechta filial uchun Premium tarifga o‘ting (Sozlamalar → Obuna).`);
     const fl = Ombor.yoz("filiallar", { ...(f.dataset.id ? byId("filiallar").get(f.dataset.id) : { id: yangiId() }), nomi, manzil: $("#f-manzil").value.trim(), tel: $("#f-tel").value.trim() });
     const h = $("#f-hammasi");
     if (h && h.checked) { DB.guruhlar.filter(g => !g.filialId).forEach(g => Ombor.yoz("guruhlar", { ...g, filialId: fl.id })); }

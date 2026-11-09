@@ -1,5 +1,12 @@
 # Versiyalar tarixi
 
+## 1.1.0 — 2026-11-09
+
+- Tariflar: Start 100 000 so‘m (100 tagacha o‘quvchi), Standart 150 000 so‘m (300 tagacha), Premium 200 000 so‘m (cheksiz, bir nechta filial).
+- Online to‘lov TezCheck orqali: Click, Payme, Uzcard/Humo. Markaz Sozlamalar → Obuna yoki muddat tugagan oynadan tarif va muddatni tanlab to‘laydi; to‘lovdan keyin obuna o‘zi uzayadi.
+- Tarif chegarasi: limitdan ortiq o‘quvchi va (Premium’dan boshqa tariflarda) ikkinchi filial qo‘shib bo‘lmaydi. Bepul sinovda cheklov yo‘q.
+- Admin panel: shu oy va o‘tgan oy tushumi, to‘lovlar ro‘yxati, tarifni o‘zgartirish, naqd/kartaga to‘lovni qo‘lda qabul qilish.
+
 ## 1.0.0 — 2026-11-08
 
 Birinchi ommaviy versiya.

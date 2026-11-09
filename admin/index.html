@@ -150,8 +150,8 @@ const ic = (n, s = 18) => `<svg class="ic" viewBox="0 0 24 24" width="${s}" heig
 
 const H = {
   parol: (() => { try { return sessionStorage.getItem("om-admin") || ""; } catch (e) { return ""; } })(),
-  markazlar: [], bugun: "", yuklanmoqda: false, xato: "",
-  filtr: "hammasi", qidiruv: "", tanlangan: "", tasdiq: "",
+  markazlar: [], tolovlar: [], tariflar: [], oylar: [1, 3, 6, 12], tolovYoqilgan: true, bugun: "", yuklanmoqda: false, xato: "",
+  filtr: "hammasi", qidiruv: "", tanlangan: "", tasdiq: "", korinish: "markazlar", naqd: null,
 };
 
 async function sorov(amal, d = {}) {
@@ -181,6 +181,12 @@ const FILTRLAR = [["hammasi", "Hammasi"], ["obuna", "Obuna"], ["sinov", "Bepul s
 const mos = (m, f) => { const t = tur(m); return f === "hammasi" || t.k === f || (f === "arafa" && (t.k === "obuna" || t.k === "sinov") && t.qoldi <= 7); };
 const oxirgiMatn = s => { if (!s) return "—"; const kun = kunFarqi(s.slice(0, 10), H.bugun); return kun <= 0 ? `bugun, ${s.slice(11, 16)}` : kun === 1 ? "kecha" : `${kun} kun oldin`; };
 
+const tarifNom = k => (H.tariflar.find(t => t.k === k) || {}).nom || "";
+const USUL = { click: "Click", payme: "Payme", uzcard: "Uzcard", humo: "Humo", naqd: "Naqd", karta: "Kartaga o‘tkazma" };
+const usulNom = u => USUL[u] || (u ? u.charAt(0).toUpperCase() + u.slice(1) : "—");
+const tolanganlar = () => H.tolovlar.filter(t => t.holat === "tolandi");
+const oyTushum = oy => tolanganlar().filter(t => (t.tolandi || "").slice(0, 7) === oy).reduce((s, t) => s + (+t.summa || 0), 0);
+
 /* ---------- Chizish ---------- */
 function chiz() {
   const ilova = $("#ilova");
@@ -203,21 +209,43 @@ function chiz() {
       ${plitka("arafa", sana("arafa"), "warn", "7 kunda tugaydi")}${plitka("tugagan", sana("tugagan"), "warn", "Muddati tugagan")}${plitka("bloklangan", sana("bloklangan"), "bad", "Bloklangan")}
       <div class="plitka" style="cursor:default"><b>${son(oyYangi)}</b><span>Shu oy ro‘yxatdan o‘tgan</span></div>
       <div class="plitka" style="cursor:default"><b>${son(oquvchi)}</b><span>Jami faol o‘quvchi</span></div>
+      <button class="plitka ok" data-a="korinish" data-k="tolovlar"><b>${son(oyTushum((b || "").slice(0, 7)))}</b><span>Shu oy tushum, so‘m</span></button>
+      <div class="plitka" style="cursor:default"><b>${son(oyTushum(b ? oyQosh(b.slice(0, 8) + "01", -1).slice(0, 7) : ""))}</b><span>O‘tgan oy tushum, so‘m</span></div>
     </div>
-    <div class="asboblar"><label class="qidiruv">${ic("qidir")}<span hidden>Qidiruv</span><input id="qidiruv" type="search" placeholder="Nomi, telefon, rahbar yoki ID" value="${esc(H.qidiruv)}" autocomplete="off"></label>
-      <div class="chiplar">${FILTRLAR.map(([k, n]) => `<button class="chip" data-filtr="${k}" aria-pressed="${H.filtr === k}">${n} <span class="son">${sana(k)}</span></button>`).join("")}</div></div>
+    ${H.tolovYoqilgan ? "" : `<p class="xato" style="font-weight:500">Online to‘lov ulanmagan: Apps Script’da TEZCHECK_KALIT qo‘yilmagan. Markazlar faqat sizga murojaat qilib to‘lay oladi.</p>`}
+    <div class="chiplar" role="tablist">${[["markazlar", "Markazlar"], ["tolovlar", "To‘lovlar"]].map(([k, n]) => `<button class="chip" data-a="korinish" data-k="${k}" aria-pressed="${H.korinish === k}">${n}</button>`).join("")}</div>
+    ${H.korinish === "tolovlar" ? tolovlarJadval() : `
+    ${H.korinish === "tolovlar" ? "" : `<div class="asboblar"><label class="qidiruv">${ic("qidir")}<span hidden>Qidiruv</span><input id="qidiruv" type="search" placeholder="Nomi, telefon, rahbar yoki ID" value="${esc(H.qidiruv)}" autocomplete="off"></label>
+      <div class="chiplar">${FILTRLAR.map(([k, n]) => `<button class="chip" data-filtr="${k}" aria-pressed="${H.filtr === k}">${n} <span class="son">${sana(k)}</span></button>`).join("")}</div></div>`}
     <section class="karta">${royxat.length ? `
-      <div class="jadval-q"><table><thead><tr><th>ID</th><th>Markaz</th><th>Telefon</th><th>Holat</th><th>Tugashi</th><th style="text-align:right">O‘quvchi</th><th>Oxirgi kirish</th><th>Ro‘yxat</th></tr></thead>
+      <div class="jadval-q"><table><thead><tr><th>ID</th><th>Markaz</th><th>Telefon</th><th>Holat</th><th>Tarif</th><th>Tugashi</th><th style="text-align:right">O‘quvchi</th><th>Oxirgi kirish</th><th>Ro‘yxat</th></tr></thead>
         <tbody>${royxat.map(m => { const t = tur(m); return `<tr data-id="${esc(m.id)}" tabindex="0">
           <td class="id">${esc(m.id)}</td><td class="nom"><b>${esc(m.nomi)}</b><span>${esc(m.rahbar)}${m.manzil ? " · " + esc(m.manzil) : ""}</span></td>
-          <td>${esc(m.tel)}</td><td><span class="pill ${t.c}">${t.n}</span></td>
+          <td>${esc(m.tel)}</td><td><span class="pill ${t.c}">${t.n}</span></td><td>${esc(tarifNom(m.tarif) || "—")}</td>
           <td>${sanaMatn(t.tugash)}<div class="muted sm">${t.qoldi < 0 ? `${-t.qoldi} kun o‘tdi` : `${t.qoldi} kun qoldi`}</div></td>
           <td class="raq">${son(m.oquvchilar)}</td><td class="muted">${oxirgiMatn(m.oxirgiKirish)}</td><td class="muted">${sanaMatn(m.royxat)}</td></tr>`; }).join("")}</tbody></table></div>
       <div class="kartalar">${royxat.map(m => { const t = tur(m); return `<button class="kart" data-id="${esc(m.id)}">
           <div class="nom"><b>${esc(m.nomi)}</b><span>${esc(m.tel)} · ${esc(m.rahbar)}</span></div><span class="pill ${t.c}">${t.n}</span>
-          <span class="muted sm">${esc(m.id)} · ${son(m.oquvchilar)} o‘quvchi · ${oxirgiMatn(m.oxirgiKirish)}</span><span class="muted sm">${t.qoldi < 0 ? "tugagan" : t.qoldi + " kun"}</span></button>`; }).join("")}</div>`
+          <span class="muted sm">${esc(m.id)}${m.tarif ? " · " + esc(tarifNom(m.tarif)) : ""} · ${son(m.oquvchilar)} o‘quvchi · ${oxirgiMatn(m.oxirgiKirish)}</span><span class="muted sm">${t.qoldi < 0 ? "tugagan" : t.qoldi + " kun"}</span></button>`; }).join("")}</div>`
       : `<div class="bosh-holat">${l.length ? "Bu filtr bo‘yicha markaz yo‘q." : H.yuklanmoqda ? "Yuklanmoqda…" : "Hali birorta markaz ro‘yxatdan o‘tmagan. Markaz CRM’da ro‘yxatdan o‘tishi bilan shu yerda paydo bo‘ladi."}</div>`}
-    </section></div>${H.tanlangan ? panel() : ""}`;
+    </section>`}</div>${H.tanlangan ? panel() : ""}`;
+}
+
+const TOLOV_HOLAT = { tolandi: ["To‘langan", "ok"], kutilmoqda: ["Kutilmoqda", "sinov"], bekor: ["Bekor", "bad"], eskirdi: ["Eskirgan", "warn"] };
+function tolovQator(t, markazUstun = true) {
+  const [hn, hc] = TOLOV_HOLAT[t.holat] || [t.holat, "sinov"];
+  return `<tr ${markazUstun ? `data-id="${esc(t.markazId)}" tabindex="0"` : ""}><td class="muted sm">${esc((t.tolandi || t.yaratildi || "").replace(" ", ", "))}</td>
+    ${markazUstun ? `<td class="nom"><b>${esc(t.markaz)}</b><span>${esc(t.markazId)}</span></td>` : ""}
+    <td>${esc(tarifNom(t.tarif) || t.tarif)} · ${esc(t.oylar)} oy</td><td class="raq"><b>${son(t.summa)}</b></td>
+    <td>${esc(usulNom(t.usul))}</td><td><span class="pill ${hc}">${hn}</span></td></tr>`;
+}
+function tolovlarJadval() {
+  const l = H.tolovlar.slice().sort((a, c) => (c.tolandi || c.yaratildi || "").localeCompare(a.tolandi || a.yaratildi || ""));
+  const jami = tolanganlar().reduce((s, t) => s + (+t.summa || 0), 0);
+  return `<section class="karta">${l.length ? `<div style="padding:14px 16px;border-bottom:1px solid var(--line)" class="muted sm">Jami tushum: <b style="color:var(--text)">${son(jami)} so‘m</b> · ${tolanganlar().length} ta to‘lov</div>
+    <div class="jadval-q" style="display:block"><table><thead><tr><th>Sana</th><th>Markaz</th><th>Tarif</th><th style="text-align:right">Summa</th><th>Usul</th><th>Holat</th></tr></thead>
+    <tbody>${l.map(t => tolovQator(t)).join("")}</tbody></table></div>`
+    : `<div class="bosh-holat">Hali to‘lov yo‘q. Markaz CRM’da tarif tanlab to‘lasa yoki siz naqd to‘lov qo‘shsangiz, shu yerda ko‘rinadi.</div>`}</section>`;
 }
 
 function kirishOyna() {
@@ -244,6 +272,23 @@ function panel() {
         <button class="btn kichik" data-a="sinov7" data-sana="${sanaQosh(m.sinovTugash && m.sinovTugash >= H.bugun ? m.sinovTugash : H.bugun, 7)}">+7 kun sinov</button></div>
       <div class="qator"><label class="maydon" style="flex:1 1 180px">Yoki aniq sana<input id="p-sana" type="date" value="${esc(m.tugash || "")}"></label>
         <button class="btn kichik" data-a="sana-saqla" style="align-self:flex-end;min-height:44px">Saqlash</button></div>
+    </section>
+
+    <section class="blok"><h3>Tarif va to‘lov</h3>
+      <dl class="malumot"><dt>Joriy tarif</dt><dd>${esc(tarifNom(m.tarif) || "belgilanmagan")}</dd><dt>Faol o‘quvchi</dt><dd>${son(m.oquvchilar)}${(H.tariflar.find(x => x.k === m.tarif) || {}).limit ? " / " + (H.tariflar.find(x => x.k === m.tarif) || {}).limit : ""}</dd></dl>
+      ${H.naqd ? `<div class="blok" style="box-shadow:none;background:var(--s2);padding:12px">
+          <div class="qator">${H.tariflar.map(x => `<button class="chip" data-a="naqd-tarif" data-k="${x.k}" aria-pressed="${H.naqd.tarif === x.k}">${esc(x.nom)} · ${son(x.narx)}</button>`).join("")}</div>
+          <div class="qator">${H.oylar.map(n => `<button class="chip" data-a="naqd-oy" data-n="${n}" aria-pressed="${H.naqd.oylar === n}">${n === 12 ? "1 yil" : n + " oy"}</button>`).join("")}</div>
+          <div class="qator"><label class="maydon" style="flex:1 1 140px">Summa, so‘m<input id="n-summa" inputmode="numeric" value="${(H.tariflar.find(x => x.k === H.naqd.tarif) || { narx: 0 }).narx * H.naqd.oylar}"></label>
+            <label class="maydon" style="flex:1 1 140px">Usul<input id="n-usul" value="naqd" list="usullar"></label></div>
+          <datalist id="usullar"><option value="naqd"><option value="karta"><option value="click"><option value="payme"></datalist>
+          <label class="maydon">Izoh<input id="n-izoh" placeholder="Masalan: kartaga o‘tkazdi, chek bor"></label>
+          <div class="qator"><button class="btn asosiy kichik" data-a="naqd-saqla">To‘lovni qabul qilish</button><button class="btn kichik" data-a="naqd-bekor">Bekor qilish</button></div>
+          <span class="muted sm">Muddat ${sanaMatn(oyQosh([H.bugun, m.tugash || "", m.sinovTugash || ""].sort().pop(), H.naqd.oylar))} gacha uzayadi va tushumga qo‘shiladi.</span></div>`
+        : `<div class="qator"><button class="btn yumshoq kichik" data-a="naqd">+ Naqd / qo‘lda to‘lov</button>
+            <select id="p-tarif" class="btn kichik" style="min-height:34px" aria-label="Tarifni o‘zgartirish"><option value="">Tarifni o‘zgartirish…</option>${H.tariflar.map(x => `<option value="${x.k}">${esc(x.nom)}</option>`).join("")}<option value="-">Tarifsiz (cheklovsiz)</option></select></div>`}
+      ${(() => { const tl = H.tolovlar.filter(t => t.markazId === m.id).sort((a, c) => (c.tolandi || c.yaratildi || "").localeCompare(a.tolandi || a.yaratildi || ""));
+        return tl.length ? `<div class="jadval-q" style="display:block"><table><tbody>${tl.map(t => tolovQator(t, false)).join("")}</tbody></table></div>` : `<span class="muted sm">To‘lovlar hali yo‘q.</span>`; })()}
     </section>
 
     <section class="blok"><h3>Kirish huquqi</h3>
@@ -282,7 +327,8 @@ function panel() {
 /* ---------- Amallar ---------- */
 async function yukla(jim) {
   H.yuklanmoqda = true; if (!jim) chiz();
-  try { const j = await sorov("admin_royxat"); if (!j.ok) throw new Error(j.xato); H.markazlar = j.markazlar; H.bugun = j.bugun; H.xato = ""; }
+  try { const j = await sorov("admin_royxat", { tekshir: !jim }); if (!j.ok) throw new Error(j.xato);
+    H.markazlar = j.markazlar; H.tolovlar = j.tolovlar || []; H.tariflar = j.tariflar || []; H.oylar = j.oylar || H.oylar; H.tolovYoqilgan = j.tolovYoqilgan !== false; H.bugun = j.bugun; H.xato = ""; }
   catch (e) { if (H.parol) H.xato = "Yuklab bo‘lmadi: " + e.message; }
   H.yuklanmoqda = false; chiz();
 }
@@ -304,7 +350,7 @@ function chiqish(sabab) {
 const AMAL = {
   yangila: () => yukla(),
   chiqish: () => chiqish(),
-  yop: (el, e) => { if (e.target === el || el.classList.contains("yop")) { H.tanlangan = ""; H.tasdiq = ""; chiz(); } },
+  yop: (el, e) => { if (e.target === el || el.classList.contains("yop")) { H.tanlangan = ""; H.tasdiq = ""; H.naqd = null; chiz(); } },
   uzaytir: el => ozgar({ tugash: el.dataset.sana }, `Obuna ${sanaMatn(el.dataset.sana)} gacha uzaytirildi`),
   sinov7: el => ozgar({ sinovTugash: el.dataset.sana }, `Sinov ${sanaMatn(el.dataset.sana)} gacha uzaytirildi`),
   "sana-saqla": () => { const v = $("#p-sana").value; ozgar({ tugash: v }, v ? `Obuna ${sanaMatn(v)} gacha` : "Obuna olib tashlandi"); },
@@ -316,6 +362,20 @@ const AMAL = {
   "xabar-ochir": () => ozgar({ xabar: "" }, "Xabar olib tashlandi"),
   izoh: () => ozgar({ izoh: $("#p-izoh").value.trim() }, "Izoh saqlandi"),
   ochir: () => { H.tasdiq = "ochir"; chiz(); },
+  korinish: el => { H.korinish = el.dataset.k; chiz(); },
+  naqd: () => { const m = H.markazlar.find(x => x.id === H.tanlangan); H.naqd = { tarif: (m && m.tarif) || (H.tariflar[0] || {}).k, oylar: 1 }; chiz(); },
+  "naqd-tarif": el => { H.naqd.tarif = el.dataset.k; chiz(); },
+  "naqd-oy": el => { H.naqd.oylar = +el.dataset.n; chiz(); },
+  "naqd-bekor": () => { H.naqd = null; chiz(); },
+  "naqd-saqla": async el => {
+    el.disabled = true;
+    try {
+      const j = await sorov("admin_tolov_qosh", { id: H.tanlangan, tarif: H.naqd.tarif, oylar: H.naqd.oylar, summa: +$("#n-summa").value.replace(/\D/g, ""), usul: $("#n-usul").value.trim() || "naqd", izoh: $("#n-izoh").value.trim() });
+      if (!j.ok) throw new Error(j.xato);
+      const i = H.markazlar.findIndex(x => x.id === H.tanlangan); if (i >= 0) H.markazlar[i] = j.markaz;
+      H.tolovlar.push(j.tolov); H.naqd = null; chiz(); toast(`To‘lov qabul qilindi: ${sanaMatn(j.markaz.tugash)} gacha`);
+    } catch (e) { el.disabled = false; toast("Saqlanmadi: " + e.message); }
+  },
   "ochir-ha": async () => {
     try { const j = await sorov("admin_ochir", { id: H.tanlangan }); if (!j.ok) throw new Error(j.xato); H.markazlar = H.markazlar.filter(x => x.id !== H.tanlangan); H.tanlangan = ""; H.tasdiq = ""; chiz(); toast("Markaz o‘chirildi"); }
     catch (e) { toast("O‘chirilmadi: " + e.message); }
@@ -331,6 +391,9 @@ document.addEventListener("click", e => {
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && H.tanlangan) { H.tanlangan = ""; H.tasdiq = ""; chiz(); }
   if (e.key === "Enter" && e.target.matches("tr[data-id]")) { H.tanlangan = e.target.dataset.id; chiz(); }
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "p-tarif" && e.target.value) { const v = e.target.value === "-" ? "" : e.target.value; ozgar({ tarif: v }, v ? `Tarif: ${tarifNom(v)}` : "Tarif olib tashlandi"); }
 });
 document.addEventListener("input", e => {
   if (e.target.id === "qidiruv") { H.qidiruv = e.target.value; const p = e.target.selectionStart; chiz(); const q = $("#qidiruv"); q.focus(); try { q.setSelectionRange(p, p); } catch (x) {} }

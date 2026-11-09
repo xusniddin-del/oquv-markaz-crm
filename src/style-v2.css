@@ -237,3 +237,15 @@ pre.kod-blok { background: var(--surface-2); border: 1px solid var(--line); bord
 @keyframes aylan { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .aylana { animation-duration: 2.4s; } }
 .logo.xavf { background: var(--bad, #C81E1E); }
+
+/* Tariflar */
+.tariflar { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; }
+.tarif { display:flex; flex-direction:column; gap:4px; text-align:left; padding:14px; border-radius:14px; border:2px solid var(--line); background: var(--surface); cursor:pointer; color: var(--text); font: inherit; min-width:0; }
+.tarif:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--line)); }
+.tarif.tanlangan { border-color: var(--primary); background: var(--primary-soft); }
+.tarif .t-nom { font-weight:700; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.tarif .t-narx { font-size:22px; font-weight:700; font-variant-numeric: tabular-nums; }
+.tarif .t-narx small { font-size:13px; font-weight:500; color: var(--muted); }
+.tarif .t-shart { font-size:13px; color: var(--muted); }
+.tarif .t-ogoh { font-size:12px; color: var(--warn); font-weight:600; }
+.btn-katta { min-height:52px; font-size:16px; width:100%; }

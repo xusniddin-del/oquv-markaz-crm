@@ -134,11 +134,11 @@ function renderBanner() {
   let h = "";
   const L = litsenziyaHolati();
   if (DB.litsenziya.xabar && !DB.meta.demo) h += `<div class="banner" role="status">${icon("message")}<div class="b-mat"><b>Sotuvchidan xabar:</b> ${esc(DB.litsenziya.xabar)}</div></div>`;
-  const aloqa = `Davom ettirish uchun sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : "."}`;
+  const aloqa = DB.litsenziya.tolovYoqilgan ? "Davom ettirish uchun tarif tanlab to‘lang." : `Davom ettirish uchun sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : "."}`;
   if (direktorMi() && !DB.meta.demo && L.tur === "sinov" && L.qoldi !== null && L.qoldi <= SOZLAMALAR.sinovKun) h += `<div class="banner" role="status">${icon("gift")}<div class="b-mat"><b>Bepul sinov: ${L.qoldi === 0 ? "bugun oxirgi kun" : `${L.qoldi} kun qoldi`}.</b> ${sanaMatn(L.tugash)} gacha. ${aloqa}</div>
-    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Obuna</button></div>`;
+    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Tarif tanlash</button></div>`;
   else if (direktorMi() && !DB.meta.demo && L.tur === "faol" && L.qoldi <= 7) h += `<div class="banner" role="status">${icon("alert")}<div class="b-mat"><b>Obuna ${L.qoldi === 0 ? "bugun" : `${L.qoldi} kundan keyin`} tugaydi</b> (${sanaMatn(L.tugash)}). ${aloqa}</div>
-    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Obuna</button></div>`;
+    <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Uzaytirish</button></div>`;
   if (!Mahalliy.ishlaydi) h += `<div class="banner xavf" role="alert">${icon("alert")}<div class="b-mat"><b>Brauzer xotirasi ishlamayapti.</b> Ma’lumotlar sahifa yopilganda o‘chadi. Ishni tugatgach albatta zaxira oling.</div></div>`;
   if (direktorMi() && !UI.bannerYopildi && (OQ().length || GR().length)) {
     const z = DB.meta.oxirgiZaxira, kun = z ? kunFarqi(z, bugun()) : null;

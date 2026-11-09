@@ -43,7 +43,7 @@ const AMALLAR = {
     }
     try { await Ombor.almashtir(await demoDB()); } catch (e) { toast("Demo yuklanmadi: " + (e.message || e), "warn"); return; }
     const d = DB.xodimlar.find(x => x.rol === "direktor"), dd = DEMO_XODIMLAR.find(x => x.rol === "direktor");
-    Sessiya.qoy(d.id); UI.dav = null; UI.tf.oid = ""; Ilova.holat = "ichida"; Server.holat = "ok";
+    Sessiya.qoy(d.id); UI.dav = null; UI.tf.oid = ""; Ilova.holat = "ichida"; Server.holat = "ok"; setTimeout(() => Server.tekshir(), 50);
     ot("bosh"); toast(`Demo: direktor sifatida kirdingiz (login ${dd.login}, parol ${dd.parol})`);
   },
   "tozala": async () => {
@@ -214,7 +214,8 @@ const FORMALAR = {
     const db = boshDB();
     db.sozlamalar = { markazNomi: nom, markazTel: tel, manzil: $("#r-manzil").value.trim() };
     db.litsenziya = { royxat: bugun(), sinovTugash: j.sinovTugash, tugash: j.tugash || "", markazId: j.id, token: j.token, holat: j.holat || "faol", xabar: j.xabar || "", tekshirildi: Date.now(),
-      malumot: { rahbar, tel, manzil: $("#r-manzil").value.trim(), hajm: $("#r-hajm").value } };
+      malumot: { rahbar, tel, manzil: $("#r-manzil").value.trim(), hajm: $("#r-hajm").value },
+      tarif: j.tarif || "", tolovYoqilgan: !!j.tolovYoqilgan, kutilayotgan: 0, ...(j.tariflar ? { tariflar: j.tariflar } : {}), ...(j.oylar ? { oylar: j.oylar } : {}) };
     Server.bugun = j.bugun || ""; Server.holat = "ok";
     db.xodimlar.push({ id: yangiId(), ism: rahbar, rol: "direktor", login, oqituvchiId: "", filialId: "", faol: true, pinXesh: await pinXesh(p1) });
     await Ombor.almashtir(db);
@@ -245,6 +246,7 @@ const FORMALAR = {
     else {
       const gid = $("#o-guruh").value;
       if (!gid) return xatoKorsat("#o-xato", `${katta(T.guruh)}ni tanlang.`);
+      const lx = limitXato(1); if (lx) return xatoKorsat("#o-xato", lx);
       o = Ombor.yoz("oquvchilar", { id: yangiId(), yaratildi: Date.now(), filialId: (guruh(gid) || {}).filialId || joriyFilial(), ...d, azolik: [{ guruhId: gid, qoshilgan: $("#o-sana").value || bugun(), chiqqan: "", ...chegirmaQiymat($("#o-chegirma").value) }] });
       const lid = f.dataset.lid && DB.lidlar.find(x => x.id === f.dataset.lid);
       if (lid) Ombor.yoz("lidlar", { ...lid, holat: "yozildi", oquvchiId: o.id });
@@ -256,6 +258,7 @@ const FORMALAR = {
     const o = oquvchi(f.dataset.oid); if (!o) return;
     const y = toza(o), cheg = chegirmaQiymat($("#a-cheg").value), qosh = $("#a-qosh").value || bugun();
     if (f.dataset.i === "") {
+      const lx = !oquvchiFaol(o) && limitXato(1); if (lx) { Modal.yop(); return tarifLimitOyna(lx); }
       const gid = $("#a-guruh").value;
       if (!gid) return xatoKorsat("#a-xato", `Bo‘sh ${T.guruh} yo‘q yoki tanlanmagan.`);
       y.azolik.push({ guruhId: gid, qoshilgan: qosh, chiqqan: "", ...cheg });

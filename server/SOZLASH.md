@@ -27,6 +27,15 @@ Bir marta, taxminan 5 daqiqa. Kerak bo‘ladigan narsa: Google hisobi.
 4. **Deploy** → ruxsat so‘rasa, yana Allow.
 5. **Web app URL** chiqadi (`https://script.google.com/macros/s/…/exec`). Shu manzilni nusxalab, Claude’ga yuboring.
 
+## 5. Online to‘lov (TezCheck)
+1. Apps Script’da `sozlash` funksiyasidagi `const TEZCHECK_KALIT = "";` qatoriga TezCheck kabinetidagi maxfiy API kalitni (`aps_…`) yozing. Kalitni chatga yoki GitHub’ga yozmang.
+2. `sozlash` ni **Run** qiling. Google yana ruxsat so‘raydi (tashqi saytga so‘rov va taymer uchun) — Allow. Log’da «To‘lov tizimi ulangan» chiqadi.
+3. Kalitni koddan o‘chirib, saqlab qo‘ying — u yashirin sozlamada qoldi.
+4. TezCheck kassasida IP cheklovi (allowlist) yoqilgan bo‘lsa, o‘chiring: Google serverlarining IP manzili doimiy emas.
+5. **Deploy → Manage deployments → qalam → Version: New version → Deploy.**
+
+Tariflar narxi va chegaralari `Code.gs` dagi `TARIFLAR` ro‘yxatida. O‘zgartirsangiz, yangi versiya qilib Deploy qiling — CRM narxlarni serverdan oladi.
+
 ## Keyinchalik
 - Jadvalda barcha markazlar ko‘rinadi. Qatorlarni qo‘lda o‘zgartirmang: admin sayt orqali boshqaring.
 - `token` ustuni markazning maxfiy kaliti. Uni hech kimga bermang.

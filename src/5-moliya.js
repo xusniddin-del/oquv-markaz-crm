@@ -141,11 +141,13 @@ function renderSozlamalar() {
     const L = DB.litsenziya, lh = litsenziyaHolati(), oxirgi = L.tekshirildi ? new Date(L.tekshirildi) : null;
     return h + `<section class="card forma" style="max-width:640px"><div class="card-h" style="margin:0"><h2>Obuna</h2>${lh.tur === "faol" ? `<span class="pill ok">Faol</span>` : lh.tur === "sinov" ? `<span class="pill warn">Bepul sinov</span>` : lh.tur === "bloklangan" ? `<span class="pill bad">Bloklangan</span>` : ""}</div>
       <div class="kredit"><div><span>Ro‘yxatdagi telefon</span><b>${esc((L.malumot || {}).tel || DB.sozlamalar.markazTel || "—")}</b></div>
+        <div><span>Tarif</span><b>${esc((tariflar().find(t => t.k === L.tarif) || {}).nom || (lh.tur === "sinov" ? "Bepul sinov (cheklovsiz)" : "—"))}${tarifJoriy() && tarifJoriy().limit ? ` · ${DB.oquvchilar.filter(oquvchiFaol).length}/${tarifJoriy().limit} ${T.oquvchi}` : ""}</b></div>
         <div><span>Ro‘yxatdan o‘tgan</span><b>${sanaMatn(L.royxat)}</b></div>
         <div><span>${lh.tur === "faol" ? "Obuna" : "Sinov"} tugashi</span><b>${sanaMatn(lh.tugash)}${lh.qoldi !== null ? ` (${lh.qoldi < 0 ? "tugagan" : lh.qoldi + " kun qoldi"})` : ""}</b></div>
         <div><span>Oxirgi tekshiruv</span><b>${oxirgi ? `${sanaMatn(sanaStr(oxirgi))}, ${pad2(oxirgi.getHours())}:${pad2(oxirgi.getMinutes())}` : "—"}</b></div></div>
-      <p class="muted sm" style="margin:0">Obunani uzaytirish uchun sotuvchiga murojaat qiling: ${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}. To‘lovdan keyin obuna avtomatik yangilanadi.</p>
-      <div class="amal-qator"><button class="btn btn-soft" data-act="obuna-yangila">${icon("refresh", 18)} Holatni yangilash</button></div></section>`;
+      <p class="muted sm" style="margin:0">Savollar bo‘lsa: ${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}.</p>
+      <div class="amal-qator"><button class="btn btn-soft" data-act="obuna-yangila">${icon("refresh", 18)} Holatni yangilash</button></div></section>
+      <section class="card forma" style="max-width:860px"><div class="card-h" style="margin:0"><h2>Tarif tanlash va to‘lash</h2></div>${tarifTanlov()}</section>`;
   }
 
   if (t === "xodimlar") return h + bolimBosh("Har bir xodim o‘z logini va 8 xonali paroli bilan kiradi. Login avtomatik tuziladi, parolni siz berasiz. Lavozimiga qarab faqat ruxsat berilgan bo‘limlarni ko‘radi.", `<button class="btn btn-primary" data-act="xodim-yangi">${icon("plus", 18)} Xodim qo‘shish</button>`) + `
