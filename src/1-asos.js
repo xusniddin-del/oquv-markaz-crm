@@ -36,7 +36,7 @@ const SOZLAMALAR = {
   // Dastur egasi (sotuvchi). Kirish va faollashtirish oynasida ko‘rinadi.
   sotuvchi: { nom: "O‘quv Markaz CRM", tel: "+998 90 841 02 20", telegram: "" },
   // Markazlar serveri (Google Apps Script veb-ilova manzili). Bo‘sh bo‘lsa, ro‘yxat va tekshiruv ishlamaydi.
-  server: "",
+  server: "https://script.google.com/macros/s/AKfycbxZshxNSq_BtBGPIpcSw9VXBvwhGCeLPrf4T0P6W2O8w_sPSbLNEAPHC2O91DiuXwAE/exec",
   tekshirDaqiqa: 10,             // dastur ochiq turganda holat shuncha daqiqada bir tekshiriladi
   telegramHavola: "https://t.me/share/url?text=",
 

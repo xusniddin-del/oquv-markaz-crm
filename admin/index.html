@@ -130,7 +130,7 @@ td.raq { text-align: right; font-variant-numeric: tabular-nums; }
    Barcha markazlarni ko‘rish, bloklash, muddatini uzaytirish, xabar yuborish.
    Ma’lumot Google Sheets serveridan keladi; parol serverda tekshiriladi.
    ===================================================================== */
-const SERVER = "";   // Google Apps Script veb-ilova manzili (CRM dagi SOZLAMALAR.server bilan bir xil)
+const SERVER = "https://script.google.com/macros/s/AKfycbxZshxNSq_BtBGPIpcSw9VXBvwhGCeLPrf4T0P6W2O8w_sPSbLNEAPHC2O91DiuXwAE/exec";   // Google Apps Script veb-ilova manzili (CRM dagi SOZLAMALAR.server bilan bir xil)
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
