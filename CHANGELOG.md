@@ -1,5 +1,9 @@
 # Versiyalar tarixi
 
+## 1.2.0 — 2026-11-10
+
+- Rahbar parolini tiklash: sotuvchi admin panelda 6 xonali tiklash kodini yaratadi (24 soat, 5 urinish); rahbar CRM kirish oynasida «Parolni unutdingizmi?» orqali kod va yangi parolni kiritadi.
+
 ## 1.1.0 — 2026-11-09
 
 - Tariflar: Start 100 000 so‘m (100 tagacha o‘quvchi), Standart 150 000 so‘m (300 tagacha), Premium 200 000 so‘m (cheksiz, bir nechta filial).

@@ -754,7 +754,7 @@ pre.kod-blok { background: var(--surface-2); border: 1px solid var(--line); bord
    ===================================================================== */
 const SOZLAMALAR = {
   dasturNomi: "O‘quv Markaz CRM",
-  versiya: "1.1.0",              // har yangi versiyada oshiriladi (CHANGELOG.md)
+  versiya: "1.2.0",              // har yangi versiyada oshiriladi (CHANGELOG.md)
   markazNomi: "Bilim o‘quv markazi",     // dastur ichida «Sozlamalar»dan ham o‘zgartiriladi
   markazTel: "+998 90 000 00 00",
   logoMatni: "OM",
@@ -1595,19 +1595,35 @@ function renderKirish() {
     const kutish = Math.max(0, Math.ceil((k.blok - Date.now()) / 1000));
     return `<div class="kirish">${bosh}
       <section class="card"><form id="kirish-forma" class="forma" novalidate>
-        ${k.royxatOk ? `<div class="banner ok">${icon("check2")}<div class="b-mat"><b>Ro‘yxatdan o‘tdingiz!</b> ${SOZLAMALAR.sinovKun} kunlik bepul sinov ${sanaMatn(L.sinovTugash)} gacha. Endi login va parolingizni yozib kiring.</div></div>`
+        ${k.tiklashOk ? `<div class="banner ok">${icon("check2")}<div class="b-mat"><b>Parol yangilandi!</b> Loginingiz: <b>${esc(k.tiklashOk)}</b>. Endi yangi parol bilan kiring.</div></div>`
+          : k.royxatOk ? `<div class="banner ok">${icon("check2")}<div class="b-mat"><b>Ro‘yxatdan o‘tdingiz!</b> ${SOZLAMALAR.sinovKun} kunlik bepul sinov ${sanaMatn(L.sinovTugash)} gacha. Endi login va parolingizni yozib kiring.</div></div>`
           : bor ? `<div class="info-quti"><b>${esc(markazNomi())}</b></div>` : ""}
-        <label class="maydon"><span>Login</span><input id="k-login" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Loginingiz" autofocus></label>
+        <label class="maydon"><span>Login</span><input id="k-login" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Loginingiz" value="${esc(k.tiklashOk || "")}" autofocus></label>
         ${parolMaydon("k-parol", "Parol", { erkin: true })}
         <p class="xato" id="k-xato" ${kutish ? "" : "hidden"}>${kutish ? `Ko‘p marta xato kiritildi. ${kutish} soniyadan keyin urinib ko‘ring.` : ""}</p>
         <button type="submit" class="btn btn-primary btn-blok" ${kutish ? "disabled" : ""}>Kirish</button>
         <p class="muted sm" style="margin:0">Xodimlar login va parolni markaz rahbaridan oladi.</p>
+        ${bor && L.markazId ? `<button type="button" class="btn btn-ghost btn-sm" data-act="kirish-tab" data-v="tiklash" style="align-self:flex-start">Parolni unutdingizmi?</button>` : ""}
       </form></section>
       ${bor ? "" : `<section class="card forma"><b>Bu qurilmada hali markaz yo‘q</b>
         <p class="muted sm" style="margin:0">Hamkor markaz bo‘lsangiz, rahbaringizdan zaxira faylni olib tiklang. Yangi markaz bo‘lsangiz, ro‘yxatdan o‘ting: 14 kun bepul.</p>
         <div class="amal-qator"><button class="btn btn-soft" data-act="kirish-tab" data-v="royxat">Ro‘yxatdan o‘tish</button><button class="btn btn-ghost" data-act="tikla-fayl">${icon("upload", 18)} Zaxiradan tiklash</button></div></section>`}
       ${pas}</div>`;
   }
+  if (k.tab === "tiklash") return `<div class="kirish">${bosh}
+    <section class="card"><form id="tiklash-forma" class="forma" novalidate>
+      <h2 style="margin:0;font-size:18px">Rahbar parolini tiklash</h2>
+      <ol class="muted sm" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+        <li>Sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : ""}. U sizga 6 xonali tiklash kodini beradi (24 soat amal qiladi).</li>
+        <li>Kodni va yangi parolni shu yerga yozing.</li></ol>
+      <label class="maydon"><span>Tiklash kodi</span><input id="t-kod" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 xonali kod"></label>
+      ${parolMaydon("t-parol", "Yangi parol (kamida 8 belgi)", { yangi: true, erkin: true })}
+      ${parolMaydon("t-parol2", "Yangi parolni takrorlang", { yangi: true, erkin: true })}
+      <p class="xato" id="t-xato" hidden></p>
+      <button type="submit" class="btn btn-primary btn-blok">Parolni yangilash</button>
+      <p class="muted sm" style="margin:0">Xodim bo‘lsangiz, parolingizni markaz rahbari yangilaydi: Sozlamalar → Xodimlar.</p>
+      <button type="button" class="btn btn-ghost btn-sm" data-act="kirish-tab" data-v="kirish" style="align-self:flex-start">← Kirishga qaytish</button>
+    </form></section>${pas}</div>`;
   return `<div class="kirish">${bosh}
     <section class="card"><form id="royxat-forma" class="forma" novalidate>
       <p class="muted" style="margin:0">O‘quv markazingiz haqida ma’lumot kiriting va dasturdan <b>${SOZLAMALAR.sinovKun} kun bepul</b> foydalaning.</p>
@@ -2533,7 +2549,7 @@ const AMALLAR = {
       <div class="sheet-actions"><button type="button" class="btn btn-ghost" data-act="modal-yop">Bekor qilish</button><button type="submit" class="btn btn-primary">Saqlash</button></div></form>`),
 
   // Kirish ekrani
-  "kirish-tab": el => { UI.kirish.tab = el.dataset.v; UI.kirish.royxatOk = false; render(); },
+  "kirish-tab": el => { UI.kirish.tab = el.dataset.v; UI.kirish.royxatOk = false; UI.kirish.tiklashOk = ""; render(); },
   "parol-korsat": el => { const i = document.getElementById(el.dataset.target); if (i) i.type = i.type === "password" ? "text" : "password"; },
   "parol-yarat": el => { const i = document.getElementById(el.dataset.target); if (i) { i.value = parolYasa(); i.type = "text"; } },
   "litsenziya-och": () => { UI.sozTab = "litsenziya"; ot("sozlamalar"); },
@@ -2698,6 +2714,22 @@ const FORMALAR = {
     const l = $("#k-login").value, p = $("#k-parol").value;
     if (!l.trim() || !p) return xatoKorsat("#k-xato", "Login va parolni kiriting.");
     kirishTekshir(l, p);
+  },
+  // Rahbar parolini sotuvchi bergan tiklash kodi bilan yangilash
+  "tiklash-forma": async f => {
+    const kod = $("#t-kod").value.replace(/\D/g, ""), p1 = $("#t-parol").value, p2 = $("#t-parol2").value, L = DB.litsenziya;
+    if (kod.length !== 6) return xatoKorsat("#t-xato", "6 xonali tiklash kodini kiriting.");
+    if (p1.length < 8) return xatoKorsat("#t-xato", "Yangi parol kamida 8 belgidan iborat bo‘lsin.");
+    if (p1 !== p2) return xatoKorsat("#t-xato", "Parollar bir xil emas.");
+    const d = DB.xodimlar.find(x => x.rol === "direktor" && x.faol !== false) || DB.xodimlar.find(x => x.rol === "direktor");
+    if (!d) return xatoKorsat("#t-xato", "Bu qurilmada rahbar topilmadi.");
+    const tugma = f.querySelector('[type="submit"]'); tugma.disabled = true; tugma.textContent = "Tekshirilmoqda…";
+    let j;
+    try { j = await Server.sorov("parol_tiklash", { id: L.markazId, token: L.token, kod }); }
+    catch (e) { j = { ok: false, xato: "Internet yo‘q yoki server javob bermadi." }; }
+    if (!j.ok) { tugma.disabled = false; tugma.textContent = "Parolni yangilash"; return xatoKorsat("#t-xato", j.xato || "Kod qabul qilinmadi."); }
+    Ombor.yoz("xodimlar", { ...d, pinXesh: await pinXesh(p1), faol: true });
+    UI.kirish = { tab: "kirish", xato: 0, blok: 0, tiklashOk: d.login }; render();
   },
   // Yangi markaz: ma’lumotlar + rahbar paroli → 14 kunlik sinov
   "royxat-forma": async () => {

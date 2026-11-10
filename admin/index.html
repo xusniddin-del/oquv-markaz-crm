@@ -299,6 +299,15 @@ function panel() {
         : `<p class="muted sm" style="margin:0">Bloklangan markaz dasturga kira olmaydi, lekin ma’lumotlari o‘chmaydi.</p><div class="qator"><button class="btn xavfli" data-a="blok">${ic("qulf")} Bloklash</button></div>`}
     </section>
 
+    <section class="blok"><h3>Rahbar parolini tiklash</h3>
+      <p class="muted sm" style="margin:0">Rahbar parolini unutsa: kod yarating va unga telefon yoki Telegram orqali ayting. U CRM kirish oynasida «Parolni unutdingizmi?» ni bosib, kod va yangi parolni kiritadi. Kod 24 soat amal qiladi.</p>
+      ${H.tiklash && H.tiklash.id === m.id ? `<div class="tasdiq" style="background:var(--primary-soft)"><span class="sm">Tiklash kodi:</span>
+          <b style="font-size:30px;letter-spacing:.18em;font-variant-numeric:tabular-nums">${esc(H.tiklash.kod)}</b>
+          <span class="sm">Rahbar logini: <b>${esc(H.tiklash.login || m.login || "—")}</b> · ${esc(H.tiklash.muddat)} gacha</span>
+          <div class="qator"><button class="btn kichik" data-a="nusxa" data-v="${esc(H.tiklash.kod)}">${ic("nusxa", 14)} Nusxalash</button></div></div>` : ""}
+      <div class="qator"><button class="btn kichik" data-a="tiklash">${H.tiklash && H.tiklash.id === m.id ? "Yangi kod yaratish" : "Tiklash kodi yaratish"}</button></div>
+    </section>
+
     <section class="blok"><h3>Markazga xabar</h3>
       <p class="muted sm" style="margin:0">Xabar markaz dasturining tepasida chiqadi. Bloklanganda yoki muddat tugaganda ham ko‘rinadi.</p>
       <textarea id="p-xabar" maxlength="500" placeholder="Masalan: Obuna 1-dekabrda tugaydi, to‘lovni unutmang.">${esc(m.xabar)}</textarea>
@@ -363,6 +372,11 @@ const AMAL = {
   izoh: () => ozgar({ izoh: $("#p-izoh").value.trim() }, "Izoh saqlandi"),
   ochir: () => { H.tasdiq = "ochir"; chiz(); },
   korinish: el => { H.korinish = el.dataset.k; chiz(); },
+  tiklash: async el => {
+    el.disabled = true;
+    try { const j = await sorov("admin_tiklash", { id: H.tanlangan }); if (!j.ok) throw new Error(j.xato); H.tiklash = { id: H.tanlangan, kod: j.kod, muddat: j.muddat, login: j.login }; chiz(); toast("Tiklash kodi yaratildi"); }
+    catch (e) { el.disabled = false; toast("Yaratilmadi: " + e.message); }
+  },
   naqd: () => { const m = H.markazlar.find(x => x.id === H.tanlangan); H.naqd = { tarif: (m && m.tarif) || (H.tariflar[0] || {}).k, oylar: 1 }; chiz(); },
   "naqd-tarif": el => { H.naqd.tarif = el.dataset.k; chiz(); },
   "naqd-oy": el => { H.naqd.oylar = +el.dataset.n; chiz(); },
