@@ -182,7 +182,7 @@ function renderKirish() {
     const kutish = Math.max(0, Math.ceil((k.blok - Date.now()) / 1000));
     return `<div class="kirish">${bosh}
       <section class="card"><form id="kirish-forma" class="forma" novalidate>
-        ${k.tiklashOk ? `<div class="banner ok">${icon("check2")}<div class="b-mat"><b>Parol yangilandi!</b> Loginingiz: <b>${esc(k.tiklashOk)}</b>. Endi yangi parol bilan kiring.</div></div>`
+        ${k.tiklashOk ? `<div class="banner ok">${icon("check2")}<div class="b-mat"><b>Parol yangilandi!</b> Loginingiz: <b>${esc(k.tiklashOk)}</b>. Sotuvchi yuborgan yangi parol bilan kiring.</div></div>`
           : k.royxatOk ? `<div class="banner ok">${icon("check2")}<div class="b-mat"><b>Ro‘yxatdan o‘tdingiz!</b> ${SOZLAMALAR.sinovKun} kunlik bepul sinov ${sanaMatn(L.sinovTugash)} gacha. Endi login va parolingizni yozib kiring.</div></div>`
           : bor ? `<div class="info-quti"><b>${esc(markazNomi())}</b></div>` : ""}
         <label class="maydon"><span>Login</span><input id="k-login" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Loginingiz" value="${esc(k.tiklashOk || "")}" autofocus></label>
@@ -190,27 +190,22 @@ function renderKirish() {
         <p class="xato" id="k-xato" ${kutish ? "" : "hidden"}>${kutish ? `Ko‘p marta xato kiritildi. ${kutish} soniyadan keyin urinib ko‘ring.` : ""}</p>
         <button type="submit" class="btn btn-primary btn-blok" ${kutish ? "disabled" : ""}>Kirish</button>
         <p class="muted sm" style="margin:0">Xodimlar login va parolni markaz rahbaridan oladi.</p>
-        ${bor && L.markazId ? `<button type="button" class="btn btn-ghost btn-sm" data-act="kirish-tab" data-v="tiklash" style="align-self:flex-start">Parolni unutdingizmi?</button>` : ""}
+        ${bor && L.markazId ? `<button type="button" class="btn btn-ghost btn-sm" data-act="parol-unutdim" style="align-self:flex-start">${icon("message", 16)} Parolni unutdim</button>` : ""}
       </form></section>
       ${bor ? "" : `<section class="card forma"><b>Bu qurilmada hali markaz yo‘q</b>
         <p class="muted sm" style="margin:0">Hamkor markaz bo‘lsangiz, rahbaringizdan zaxira faylni olib tiklang. Yangi markaz bo‘lsangiz, ro‘yxatdan o‘ting: 14 kun bepul.</p>
         <div class="amal-qator"><button class="btn btn-soft" data-act="kirish-tab" data-v="royxat">Ro‘yxatdan o‘tish</button><button class="btn btn-ghost" data-act="tikla-fayl">${icon("upload", 18)} Zaxiradan tiklash</button></div></section>`}
       ${pas}</div>`;
   }
-  if (k.tab === "tiklash") return `<div class="kirish">${bosh}
-    <section class="card"><form id="tiklash-forma" class="forma" novalidate>
-      <h2 style="margin:0;font-size:18px">Rahbar parolini tiklash</h2>
-      <ol class="muted sm" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
-        <li>Sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : ""}. U sizga 6 xonali tiklash kodini beradi (24 soat amal qiladi).</li>
-        <li>Kodni va yangi parolni shu yerga yozing.</li></ol>
-      <label class="maydon"><span>Tiklash kodi</span><input id="t-kod" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 xonali kod"></label>
-      ${parolMaydon("t-parol", "Yangi parol (kamida 8 belgi)", { yangi: true, erkin: true })}
-      ${parolMaydon("t-parol2", "Yangi parolni takrorlang", { yangi: true, erkin: true })}
-      <p class="xato" id="t-xato" hidden></p>
-      <button type="submit" class="btn btn-primary btn-blok">Parolni yangilash</button>
-      <p class="muted sm" style="margin:0">Xodim bo‘lsangiz, parolingizni markaz rahbari yangilaydi: Sozlamalar → Xodimlar.</p>
-      <button type="button" class="btn btn-ghost btn-sm" data-act="kirish-tab" data-v="kirish" style="align-self:flex-start">← Kirishga qaytish</button>
-    </form></section>${pas}</div>`;
+  if (k.tab === "yordam") return `<div class="kirish">${bosh}
+    <section class="card forma chat-karta">
+      <div class="card-h" style="margin:0"><h2 style="font-size:18px;margin:0">Sotuvchi bilan chat</h2><button type="button" class="btn btn-ghost btn-sm" data-act="kirish-tab" data-v="kirish">← Kirish</button></div>
+      <p class="muted sm" style="margin:0">So‘rovingiz sotuvchiga yuborildi. U sizga ${SOZLAMALAR.sotuvchi.tel ? "telefon qilib" : ""} tekshiradi va shu yerga yangi parol yuboradi: parol qurilmangizda o‘zi o‘rnatiladi. Oynani yopmang.</p>
+      <div class="chat-royxat" id="chat-royxat" aria-live="polite">${chatXabarlarHTML()}</div>
+      <form id="chat-forma" class="chat-yoz" novalidate><input id="chat-matn" placeholder="Xabar yozing…" autocomplete="off" maxlength="1000" aria-label="Xabar">
+        <button type="submit" class="btn btn-primary">Yuborish</button></form>
+      <p class="xato" id="chat-xato" hidden></p>
+    </section>${pas}</div>`;
   return `<div class="kirish">${bosh}
     <section class="card"><form id="royxat-forma" class="forma" novalidate>
       <p class="muted" style="margin:0">O‘quv markazingiz haqida ma’lumot kiriting va dasturdan <b>${SOZLAMALAR.sinovKun} kun bepul</b> foydalaning.</p>

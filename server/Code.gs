@@ -15,6 +15,8 @@ const USTUNLAR = ["id", "token", "nomi", "rahbar", "tel", "manzil", "hajm", "log
   "holat", "xabar", "izoh", "oxirgiKirish", "oquvchilar", "guruhlar", "xodimlar", "versiya", "tarif", "tiklash"];
 const TOLOV_VARAQ = "Tolovlar";
 const TOLOV_USTUNLAR = ["billId", "markazId", "markaz", "tarif", "oylar", "summa", "holat", "yaratildi", "tolandi", "usul", "havola", "muhit", "izoh"];
+const XABAR_VARAQ = "Xabarlar";   // markaz ↔ sotuvchi chati (parolni unutish va boshqa savollar)
+const XABAR_USTUNLAR = ["id", "markazId", "markaz", "kimdan", "turi", "matn", "vaqt", "oqildi", "login"];
 const SINOV_KUN = 14;
 const VAQT_ZONA = "Asia/Tashkent";
 
@@ -42,7 +44,7 @@ function sozlash() {
     P.setProperty("ADMIN_PAROL", PAROL);
   }
   if (!P.getProperty("ADMIN_PAROL")) throw new Error("Admin parol hali qo‘yilmagan: PAROL qatoriga parol yozib, qayta Run qiling.");
-  varaq(); tolovVaraq();
+  varaq(); tolovVaraq(); xabarVaraq();
   // Kutilayotgan to‘lovlarni har 10 daqiqada tekshiruvchi taymer
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "tolovlarniTekshir").forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger("tolovlarniTekshir").timeBased().everyMinutes(10).create();
@@ -63,6 +65,7 @@ function varaqOl(nom, ustunlar) {
 }
 const varaq = () => varaqOl(VARAQ, USTUNLAR);
 const tolovVaraq = () => varaqOl(TOLOV_VARAQ, TOLOV_USTUNLAR);
+const xabarVaraq = () => varaqOl(XABAR_VARAQ, XABAR_USTUNLAR);
 function bugun() { return Utilities.formatDate(new Date(), VAQT_ZONA, "yyyy-MM-dd"); }
 function hozir() { return Utilities.formatDate(new Date(), VAQT_ZONA, "yyyy-MM-dd HH:mm"); }
 function sanaQosh(s, kun) {
@@ -96,6 +99,17 @@ const qatorlar = sh => qatorlarOl(sh, USTUNLAR, "id");
 const yoz = (sh, o) => yozOl(sh, USTUNLAR, o);
 const tolovlar = sh => qatorlarOl(sh, TOLOV_USTUNLAR, "billId");
 const tolovYoz = (sh, o) => yozOl(sh, TOLOV_USTUNLAR, o);
+const xabarlar = sh => qatorlarOl(sh, XABAR_USTUNLAR, "id");
+const xabarYoz = (sh, o) => yozOl(sh, XABAR_USTUNLAR, o);
+const YASHIRIN = "••••••••";
+// Chat xabarini tashqariga chiqarish. Yangi parol faqat markazga, faqat bir marta ochiq ko‘rinadi
+function xabarOchiq(x, parolBilan) {
+  const r = { id: x.id, kimdan: x.kimdan, turi: x.turi, matn: x.turi === "parol" && !parolBilan ? YASHIRIN : x.matn, vaqt: +x.vaqt, oqildi: x.oqildi, login: x.login };
+  return r;
+}
+function chatXabarlar(markazId, sh) {
+  return xabarlar(sh || xabarVaraq()).filter(x => x.markazId === markazId).sort((a, b) => +a.vaqt - +b.vaqt).slice(-60);
+}
 const tel9 = t => String(t || "").replace(/\D/g, "").slice(-9);
 const prop = k => PropertiesService.getScriptProperties().getProperty(k);
 const tarifOl = k => TARIFLAR.find(t => t.k === k);
@@ -240,19 +254,28 @@ function amal(d) {
     return { ok: true, havola, billId, summa };
   }
 
-  // Rahbar parolni unutdi: sotuvchi bergan 6 xonali kod bilan yangi parol qo‘yiladi (kod 24 soat, 5 urinish)
-  if (d.amal === "parol_tiklash") {
+  // Markaz sotuvchiga yozadi (masalan «Parolni unutdim»). Kirmasdan ham ishlaydi: markaz tokeni qurilmada bor
+  if (d.amal === "chat_yoz") {
     const o = markazTop(sh, d);
     if (!o) return { ok: false, kod: "topilmadi", xato: "Markaz tizimda topilmadi." };
-    const kesh = CacheService.getScriptCache(), kk = "tiklash_xato_" + o.id, xatolar = +(kesh.get(kk) || 0);
-    const [kod, muddat] = String(o.tiklash || "").split("|");
-    if (!kod || Date.now() > +muddat || xatolar >= 5) {
-      if (o.tiklash) { o.tiklash = ""; yoz(sh, o); }
-      return { ok: false, xato: "Tiklash kodi yo‘q yoki eskirgan. Sotuvchidan yangi kod so‘rang." };
-    }
-    if (String(d.kod || "").replace(/\D/g, "") !== kod) { kesh.put(kk, String(xatolar + 1), 86400); return { ok: false, xato: `Kod noto‘g‘ri. Yana ${4 - xatolar} ta urinish qoldi.` }; }
-    o.tiklash = ""; yoz(sh, o); kesh.remove(kk);
-    return { ok: true };
+    const turi = d.turi === "parol_sorov" ? "parol_sorov" : "matn";
+    const matnT = String(d.matn || (turi === "parol_sorov" ? "Parolni unutdim" : "")).trim().slice(0, 1000);
+    if (!matnT) return { ok: false, xato: "Xabar bo‘sh." };
+    const xsh = xabarVaraq();
+    xabarYoz(xsh, { id: "x" + Date.now() + Math.floor(Math.random() * 1000), markazId: o.id, markaz: o.nomi, kimdan: "markaz", turi, matn: matnT, vaqt: Date.now(), oqildi: "", login: String(d.login || "").slice(0, 40) });
+    return { ok: true, xabarlar: chatXabarlar(o.id, xsh).map(x => xabarOchiq(x, false)) };
+  }
+  // Markaz chatni o‘qiydi. Sotuvchi yuborgan yangi parol shu yerda bir marta beriladi, keyin jadvalda yashiriladi
+  if (d.amal === "chat_ol") {
+    const o = markazTop(sh, d);
+    if (!o) return { ok: false, kod: "topilmadi", xato: "Markaz tizimda topilmadi." };
+    const xsh = xabarVaraq(), l = chatXabarlar(o.id, xsh), chiq = [];
+    l.forEach(x => {
+      const yangiParol = x.kimdan === "admin" && x.turi === "parol" && !x.oqildi;
+      chiq.push(xabarOchiq(x, yangiParol));
+      if (x.kimdan === "admin" && !x.oqildi) { x.oqildi = hozir(); if (yangiParol) x.matn = YASHIRIN; xabarYoz(xsh, x); }
+    });
+    return { ok: true, xabarlar: chiq };
   }
 
   // ----- Admin amallari: parol talab qilinadi -----
@@ -264,6 +287,17 @@ function amal(d) {
     if (d.parol !== parol) { kesh.put("admin_xato", String(xatolar + 1), 600); return { ok: false, kod: "parol", xato: "Parol noto‘g‘ri." }; }
 
     if (d.amal === "admin_kirish") return { ok: true, bugun: bugun() };
+    // Qo‘ng‘iroqcha: markazlardan kelgan o‘qilmagan xabarlar va suhbatlar ro‘yxati
+    if (d.amal === "admin_bildirish") {
+      const guruh = {};
+      xabarlar(xabarVaraq()).forEach(x => {
+        const g = guruh[x.markazId] = guruh[x.markazId] || { markazId: x.markazId, markaz: x.markaz, oqilmagan: 0, parolSorov: false, oxirgi: null };
+        if (x.kimdan === "markaz" && !x.oqildi) { g.oqilmagan++; if (x.turi === "parol_sorov") g.parolSorov = true; }
+        if (!g.oxirgi || +x.vaqt > g.oxirgi.vaqt) g.oxirgi = xabarOchiq(x, false);
+      });
+      const suhbatlar = Object.keys(guruh).map(k => guruh[k]).sort((a, b) => (b.oqilmagan > 0) - (a.oqilmagan > 0) || b.oxirgi.vaqt - a.oxirgi.vaqt).slice(0, 50);
+      return { ok: true, soni: suhbatlar.reduce((s, g) => s + g.oqilmagan, 0), suhbatlar };
+    }
     if (d.amal === "admin_royxat") {
       if (d.tekshir) kutilayotganlar();
       return { ok: true, bugun: bugun(), markazlar: qatorlar(sh).map(ochiq), tolovlar: tolovlar(tolovVaraq()).map(t => { const r = Object.assign({}, t); delete r._qator; return r; }),
@@ -292,12 +326,20 @@ function amal(d) {
       const r = Object.assign({}, tol); delete r._qator;
       return { ok: true, bugun: bugun(), markaz: ochiq(o), tolov: r };
     }
-    if (d.amal === "admin_tiklash") {
-      let kod = ""; for (let i = 0; i < 6; i++) kod += Math.floor(Math.random() * 10);
-      const muddat = Date.now() + 24 * 3600 * 1000;
-      o.tiklash = kod + "|" + muddat; yoz(sh, o);
-      CacheService.getScriptCache().remove("tiklash_xato_" + o.id);
-      return { ok: true, kod, muddat: Utilities.formatDate(new Date(muddat), VAQT_ZONA, "yyyy-MM-dd HH:mm"), login: o.login };
+    // Suhbatni ochish: markaz xabarlari o‘qilgan bo‘ladi
+    if (d.amal === "admin_chat_ol") {
+      const xsh = xabarVaraq(), l = chatXabarlar(o.id, xsh);
+      l.forEach(x => { if (x.kimdan === "markaz" && !x.oqildi) { x.oqildi = hozir(); xabarYoz(xsh, x); } });
+      return { ok: true, xabarlar: l.map(x => xabarOchiq(x, x.kimdan === "admin" && x.turi === "parol" && !x.oqildi)) };
+    }
+    // Sotuvchi javob yozadi yoki rahbarga yangi parol yuboradi (markaz qurilmasida avtomatik o‘rnatiladi)
+    if (d.amal === "admin_chat_yoz") {
+      const turi = d.turi === "parol" ? "parol" : "matn", matnT = String(d.matn || "").trim().slice(0, 1000);
+      if (turi === "parol" && (matnT.length < 8 || matnT.length > 64)) return { ok: false, xato: "Parol 8–64 belgi bo‘lsin." };
+      if (!matnT) return { ok: false, xato: "Xabar bo‘sh." };
+      const xsh = xabarVaraq();
+      xabarYoz(xsh, { id: "x" + Date.now() + Math.floor(Math.random() * 1000), markazId: o.id, markaz: o.nomi, kimdan: "admin", turi, matn: matnT, vaqt: Date.now(), oqildi: "", login: "" });
+      return { ok: true, xabarlar: chatXabarlar(o.id, xsh).map(x => xabarOchiq(x, x.kimdan === "admin" && x.turi === "parol" && !x.oqildi)) };
     }
     if (d.amal === "admin_ochir") { sh.deleteRow(o._qator); return { ok: true }; }
   }

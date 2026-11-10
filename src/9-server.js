@@ -201,3 +201,74 @@ async function tolovKut(marta = 12) {
   if (marta === 1) toast(L.kutilayotgan ? "To‘lov hali tushmagan. Bir ozdan keyin yana tekshiring." : "Kutilayotgan to‘lov yo‘q", "warn");
   return false;
 }
+
+/* ---------- «Parolni unutdim»: sotuvchi bilan chat ----------
+   Xabarlar serverda (Google jadval). Sotuvchi chatga yangi parol yuborsa,
+   u rahbar akkauntiga shu qurilmada o‘rnatiladi va bir marta ko‘rsatiladi. */
+const CHAT = { xabarlar: [], taymer: null, yangi: null };
+const direktor = () => DB.xodimlar.find(x => x.rol === "direktor" && x.faol !== false) || DB.xodimlar.find(x => x.rol === "direktor");
+const vaqtMatn = ms => { const d = new Date(+ms); return `${sanaStr(d) === bugun() ? "" : sanaMatn(sanaStr(d)) + ", "}${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+function chatXabarlarHTML() {
+  if (!CHAT.xabarlar.length) return `<p class="muted sm" style="margin:auto;text-align:center">Yuklanmoqda…</p>`;
+  return CHAT.xabarlar.map(x => {
+    const men = x.kimdan === "markaz";
+    if (x.turi === "parol") {
+      const y = CHAT.yangi && CHAT.yangi.id === x.id ? CHAT.yangi : null;
+      return `<div class="chat-x u-ular parol-x"><b>${icon("check2", 16)} Yangi parol</b>
+        ${y ? `<span>Login: <b>${esc(y.login)}</b></span><span>Parol: <b class="parol-kod">${esc(y.parol)}</b></span><span class="sm">Parol qurilmangizda o‘rnatildi. Uni yozib oling.</span>
+          <button type="button" class="btn btn-primary btn-sm" data-act="chat-kirish">Kirish</button>` : `<span class="sm">Yangi parol avval yuborilgan va o‘rnatilgan.</span>`}
+        <span class="chat-vaqt">${vaqtMatn(x.vaqt)}</span></div>`;
+    }
+    return `<div class="chat-x ${men ? "u-men" : "u-ular"}">${x.turi === "parol_sorov" ? `<b>${icon("key", 14)} Parolni unutdim</b>` : esc(x.matn)}<span class="chat-vaqt">${men ? "Siz" : esc(SOZLAMALAR.sotuvchi.nom)} · ${vaqtMatn(x.vaqt)}</span></div>`;
+  }).join("");
+}
+function chatChiz() {
+  const r = $("#chat-royxat"); if (!r) return;
+  const pastda = r.scrollHeight - r.scrollTop - r.clientHeight < 40;
+  r.innerHTML = chatXabarlarHTML();
+  if (pastda || CHAT.yangi) r.scrollTop = r.scrollHeight;
+}
+async function chatQabul(l) {
+  for (const x of l) {
+    // Sotuvchi yuborgan yangi parol (bir marta ochiq keladi) — rahbar akkauntiga o‘rnatiladi
+    if (x.kimdan === "admin" && x.turi === "parol" && x.matn && !/^•+$/.test(x.matn)) {
+      const d = direktor();
+      if (d) { Ombor.yoz("xodimlar", { ...d, pinXesh: await pinXesh(x.matn), faol: true }); CHAT.yangi = { id: x.id, parol: x.matn, login: d.login }; }
+    }
+  }
+  CHAT.xabarlar = l; chatChiz();
+}
+async function chatYangila() {
+  const L = DB.litsenziya;
+  try { const j = await Server.sorov("chat_ol", { id: L.markazId, token: L.token }); if (j.ok) await chatQabul(j.xabarlar || []); }
+  catch (e) {}
+}
+async function chatYubor(matn, turi) {
+  const L = DB.litsenziya, d = direktor();
+  try {
+    const j = await Server.sorov("chat_yoz", { id: L.markazId, token: L.token, matn, turi, login: d ? d.login : "" });
+    if (!j.ok) throw new Error(j.xato);
+    await chatQabul(j.xabarlar || []);
+  } catch (e) { xatoKorsat("#chat-xato", "Yuborilmadi: " + (e.name === "TypeError" ? "internet yo‘q" : e.message)); }
+}
+function chatTaymer(yoq) {
+  clearInterval(CHAT.taymer); CHAT.taymer = null;
+  if (yoq) CHAT.taymer = setInterval(() => { if (UI.kirish.tab === "yordam" && Ilova.holat === "kirish") chatYangila(); else chatTaymer(false); }, 6000);
+}
+Object.assign(AMALLAR, {
+  "parol-unutdim": async () => {
+    UI.kirish.tab = "yordam"; CHAT.xabarlar = []; CHAT.yangi = null; render();
+    await chatYangila();
+    // Javobsiz so‘rov yarim soat ichida yuborilgan bo‘lsa, qayta yubormaydi
+    const l = CHAT.xabarlar, oxirgiAdmin = Math.max(0, ...l.filter(x => x.kimdan === "admin").map(x => +x.vaqt));
+    const ochiqSorov = l.some(x => x.turi === "parol_sorov" && +x.vaqt > oxirgiAdmin && Date.now() - x.vaqt < 30 * 60000);
+    if (!ochiqSorov) await chatYubor("Parolni unutdim", "parol_sorov");
+    else chatChiz();
+    chatTaymer(true);
+  },
+  "chat-kirish": () => {
+    const login = CHAT.yangi ? CHAT.yangi.login : "";
+    chatTaymer(false); UI.kirish = { tab: "kirish", xato: 0, blok: 0, tiklashOk: login }; render();
+    const p = $("#k-parol"); if (p) p.focus();
+  },
+});

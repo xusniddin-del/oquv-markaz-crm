@@ -1,8 +1,10 @@
 # Versiyalar tarixi
 
-## 1.2.0 — 2026-11-10
+## 1.3.0 — 2026-11-10
 
-- Rahbar parolini tiklash: sotuvchi admin panelda 6 xonali tiklash kodini yaratadi (24 soat, 5 urinish); rahbar CRM kirish oynasida «Parolni unutdingizmi?» orqali kod va yangi parolni kiritadi.
+- «Parolni unutdim» chati: rahbar kirish oynasida tugmani bosadi, sotuvchi bilan chat ochiladi va so‘rov avtomatik yuboriladi.
+- Admin panelda bildirishnomalar qo‘ng‘iroqchasi: qaysi markaz yozgani, rahbar, telefon va login. Sotuvchi chatda javob yozadi yoki «Yangi parol yuborish» qiladi — parol markaz qurilmasida avtomatik o‘rnatiladi va chatda bir marta ko‘rinadi.
+- (1.2.0 dagi tiklash kodi o‘rniga.)
 
 ## 1.1.0 — 2026-11-09
 

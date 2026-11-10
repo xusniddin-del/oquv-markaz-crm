@@ -115,6 +115,19 @@ td.raq { text-align: right; font-variant-numeric: tabular-nums; }
 .malumot dt { color: var(--muted); } .malumot dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .qator { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .tasdiq { background: var(--bad-soft); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.qongiroq-t { position: relative; }
+.badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.bild-oyna { position: fixed; top: 72px; right: max(16px, env(safe-area-inset-right, 0px)); width: min(400px, calc(100% - 32px)); max-height: min(70vh, 560px); overflow-y: auto; background: var(--surface); border-radius: var(--r); box-shadow: 0 16px 48px -12px rgb(0 0 0 / .35); z-index: 15; border: 1px solid var(--line); }
+.bild-oyna h3 { margin: 0; padding: 14px 16px; font-size: 15px; border-bottom: 1px solid var(--line); }
+.bild { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; width: 100%; cursor: pointer; }
+.bild:hover { background: var(--s2); } .bild:last-child { border-bottom: 0; }
+.bild.yangi { background: color-mix(in srgb, var(--primary-soft) 70%, transparent); }
+.chat-r { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; padding: 10px; background: var(--s2); border-radius: 12px; }
+.cx { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 14px; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.cx.m { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); }
+.cx.a { align-self: flex-end; background: var(--primary); color: #fff; }
+.cx .v { font-size: 11px; opacity: .75; }
+.cx.sorov { border: 2px solid var(--warn); }
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--on-ink); padding: 12px 18px; border-radius: 12px; font-weight: 600; z-index: 40; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
 .aylana { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid currentColor; border-top-color: transparent; animation: a .8s linear infinite; display: inline-block; }
 @keyframes a { to { transform: rotate(360deg); } }
@@ -144,7 +157,7 @@ const son = n => String(+n || 0).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 const IC = {
   qidir: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5", yangila: "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7", chiq: "M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11",
   x: "M6 6l12 12M18 6L6 18", nusxa: "M9 9h11v11H9zM5 15H4V4h11v1", qulf: "M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3", ochiq: "M6 11h12v9H6zM8 11V8a4 4 0 0 1 7.5-2",
-  xabar: "M4 5h16v11H8l-4 4z", tar: "M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14", oy: "M12 3a9 9 0 1 0 9 9", kun: "M4 6h16v14H4zM4 10h16M9 3v4M15 3v4",
+  xabar: "M4 5h16v11H8l-4 4z", qongiroq: "M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0", kalit: "M14.5 9.5a4 4 0 1 0-3.9 4.9L9 16v2H7v2H4v-3l6.1-6.1A4 4 0 0 0 14.5 9.5z", tel: "M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2", tar: "M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14", oy: "M12 3a9 9 0 1 0 9 9", kun: "M4 6h16v14H4zM4 10h16M9 3v4M15 3v4",
 };
 const ic = (n, s = 18) => `<svg class="ic" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true"><path d="${IC[n]}"/></svg>`;
 
@@ -152,6 +165,7 @@ const H = {
   parol: (() => { try { return sessionStorage.getItem("om-admin") || ""; } catch (e) { return ""; } })(),
   markazlar: [], tolovlar: [], tariflar: [], oylar: [1, 3, 6, 12], tolovYoqilgan: true, bugun: "", yuklanmoqda: false, xato: "",
   filtr: "hammasi", qidiruv: "", tanlangan: "", tasdiq: "", korinish: "markazlar", naqd: null,
+  bildirish: { soni: 0, suhbatlar: [] }, qongiroq: false, chat: null, parolTaklif: "",
 };
 
 async function sorov(amal, d = {}) {
@@ -201,7 +215,8 @@ function chiz() {
   const plitka = (f, n, cls, matn) => `<button class="plitka ${cls}" data-filtr="${f}" aria-pressed="${H.filtr === f}"><b>${son(n)}</b><span>${matn}</span></button>`;
   ilova.innerHTML = `<div class="sahifa">
     <header class="bosh"><div class="logo">OM</div><div><h1>Markazlar boshqaruvi</h1><div class="ost">O‘quv Markaz CRM · ${b ? sanaMatn(b) : ""}</div></div>
-      <div class="o"><button class="btn" data-a="yangila" ${H.yuklanmoqda ? "disabled" : ""}>${H.yuklanmoqda ? `<span class="aylana"></span>` : ic("yangila")} Yangilash</button>
+      <div class="o"><button class="btn qongiroq-t" data-a="qongiroq" aria-label="Bildirishnomalar${H.bildirish.soni ? `: ${H.bildirish.soni} ta yangi` : ""}" aria-expanded="${H.qongiroq}">${ic("qongiroq")}<span id="badge" class="badge" ${H.bildirish.soni ? "" : "hidden"}>${H.bildirish.soni}</span></button>
+        <button class="btn" data-a="yangila" ${H.yuklanmoqda ? "disabled" : ""}>${H.yuklanmoqda ? `<span class="aylana"></span>` : ic("yangila")} Yangilash</button>
         <button class="btn" data-a="chiqish">${ic("chiq")} Chiqish</button></div></header>
     ${H.xato ? `<p class="xato">${esc(H.xato)}</p>` : ""}
     <div class="plitkalar">
@@ -228,7 +243,7 @@ function chiz() {
           <div class="nom"><b>${esc(m.nomi)}</b><span>${esc(m.tel)} · ${esc(m.rahbar)}</span></div><span class="pill ${t.c}">${t.n}</span>
           <span class="muted sm">${esc(m.id)}${m.tarif ? " · " + esc(tarifNom(m.tarif)) : ""} · ${son(m.oquvchilar)} o‘quvchi · ${oxirgiMatn(m.oxirgiKirish)}</span><span class="muted sm">${t.qoldi < 0 ? "tugagan" : t.qoldi + " kun"}</span></button>`; }).join("")}</div>`
       : `<div class="bosh-holat">${l.length ? "Bu filtr bo‘yicha markaz yo‘q." : H.yuklanmoqda ? "Yuklanmoqda…" : "Hali birorta markaz ro‘yxatdan o‘tmagan. Markaz CRM’da ro‘yxatdan o‘tishi bilan shu yerda paydo bo‘ladi."}</div>`}
-    </section>`}</div>${H.tanlangan ? panel() : ""}`;
+    </section>`}</div>${H.qongiroq ? bildOyna() : ""}${H.tanlangan ? panel() : ""}`;
 }
 
 const TOLOV_HOLAT = { tolandi: ["To‘langan", "ok"], kutilmoqda: ["Kutilmoqda", "sinov"], bekor: ["Bekor", "bad"], eskirdi: ["Eskirgan", "warn"] };
@@ -248,6 +263,43 @@ function tolovlarJadval() {
     : `<div class="bosh-holat">Hali to‘lov yo‘q. Markaz CRM’da tarif tanlab to‘lasa yoki siz naqd to‘lov qo‘shsangiz, shu yerda ko‘rinadi.</div>`}</section>`;
 }
 
+const vaqtM = ms => { const d = new Date(+ms), p = n => String(n).padStart(2, "0"), s = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return `${s === H.bugun ? "" : sanaMatn(s) + ", "}${p(d.getHours())}:${p(d.getMinutes())}`; };
+function bildOyna() {
+  const l = H.bildirish.suhbatlar;
+  return `<div class="bild-oyna" role="dialog" aria-label="Bildirishnomalar"><h3>Bildirishnomalar</h3>
+    ${l.length ? l.map(g => { const m = H.markazlar.find(x => x.id === g.markazId) || {};
+      return `<button class="bild${g.oqilmagan ? " yangi" : ""}" data-a="suhbat" data-m="${esc(g.markazId)}">
+        <b>${esc(g.markaz)}</b><span class="muted sm">${vaqtM(g.oxirgi.vaqt)}</span>
+        <span class="sm">${g.parolSorov ? `<span class="pill warn">${ic("kalit", 12)} Parolni unutdi</span> ` : ""}${g.oxirgi.kimdan === "admin" ? "Siz: " : ""}${esc(g.oxirgi.turi === "parol_sorov" ? "Parolni unutdim" : g.oxirgi.turi === "parol" ? "Yangi parol yuborildi" : g.oxirgi.matn).slice(0, 80)}</span>
+        ${g.oqilmagan ? `<span class="pill bad">${g.oqilmagan}</span>` : "<span></span>"}
+        <span class="muted sm" style="grid-column:1/-1">${esc(m.rahbar || "")}${m.tel ? " · " + esc(m.tel) : ""}</span></button>`; }).join("")
+      : `<p class="muted sm" style="padding:16px;margin:0">Hozircha xabar yo‘q. Markaz CRM’da «Parolni unutdim» ni bossa, shu yerda paydo bo‘ladi.</p>`}</div>`;
+}
+function chatHTML() {
+  const l = (H.chat && H.chat.xabarlar) || [];
+  if (!l.length) return `<p class="muted sm" style="margin:auto">${H.chat && H.chat.yuklanmoqda ? "Yuklanmoqda…" : "Hali xabar yo‘q."}</p>`;
+  return l.map(x => x.kimdan === "markaz"
+    ? `<div class="cx m${x.turi === "parol_sorov" ? " sorov" : ""}">${x.turi === "parol_sorov" ? `<b>${ic("kalit", 14)} Parolni unutdim</b>${x.login ? `<span class="sm">Rahbar logini: <b>${esc(x.login)}</b></span>` : ""}` : esc(x.matn)}<span class="v">Markaz · ${vaqtM(x.vaqt)}</span></div>`
+    : `<div class="cx a">${x.turi === "parol" ? `<b>${ic("kalit", 14)} Yangi parol: ${esc(x.matn)}</b><span class="v">${x.oqildi ? "Markazga yetkazildi va o‘rnatildi" : "Markaz chatni ochishini kutmoqda"}</span>` : esc(x.matn)}<span class="v">Siz · ${vaqtM(x.vaqt)}</span></div>`).join("");
+}
+function chatChiz() { const r = $("#chat-r"); if (!r) return; const p = r.scrollHeight - r.scrollTop - r.clientHeight < 40; r.innerHTML = chatHTML(); if (p) r.scrollTop = r.scrollHeight; }
+function parolYasa() { const h = "abcdefghjkmnpqrstuvwxyz", r = n => Math.floor(Math.random() * n); let p = h[r(23)].toUpperCase(); for (let i = 0; i < 3; i++) p += h[r(23)]; for (let i = 0; i < 4; i++) p += r(10); return p; }
+async function chatOch(id) {
+  H.chat = { id, xabarlar: [], yuklanmoqda: true }; H.parolTaklif = parolYasa(); chiz();
+  try { const j = await sorov("admin_chat_ol", { id }); if (j.ok && H.chat && H.chat.id === id) { H.chat.xabarlar = j.xabarlar; H.chat.yuklanmoqda = false; chatChiz(); const r = $("#chat-r"); if (r) r.scrollTop = r.scrollHeight; bildYangila(); } }
+  catch (e) { if (H.chat) H.chat.yuklanmoqda = false; chatChiz(); }
+}
+async function bildYangila() {
+  try { const j = await sorov("admin_bildirish"); if (!j.ok) return;
+    const avval = H.bildirish.soni; H.bildirish = { soni: j.soni, suhbatlar: j.suhbatlar };
+    const b = $("#badge"); if (b) { b.textContent = j.soni; b.hidden = !j.soni; }
+    document.title = (j.soni ? `(${j.soni}) ` : "") + "Markazlar boshqaruvi";
+    if (j.soni > avval) toast(`Yangi xabar: ${(j.suhbatlar.find(g => g.oqilmagan) || {}).markaz || ""}`);
+    if (H.qongiroq) chiz();
+  } catch (e) {}
+}
+
 function kirishOyna() {
   return `<div class="kirish"><form id="kirish-forma" novalidate>
     <div class="logo">OM</div><div><h1>Markazlar boshqaruvi</h1><p>Faqat sotuvchi uchun</p></div>
@@ -263,6 +315,16 @@ function panel() {
   return `<div class="parda" data-a="yop"><aside class="panel" role="dialog" aria-modal="true" aria-label="${esc(m.nomi)}">
     <div class="panel-bosh"><div><div class="id">${esc(m.id)}</div><h2>${esc(m.nomi)}</h2><span class="pill ${t.c}" style="margin-top:6px">${t.n}</span></div>
       <button class="btn kichik yop" data-a="yop" aria-label="Yopish">${ic("x")}</button></div>
+
+    <section class="blok"><h3>Chat</h3>
+      <div class="qator sm"><span>Rahbar: <b>${esc(m.rahbar)}</b></span><span>Login: <b>${esc(((H.chat && H.chat.xabarlar) || []).filter(x => x.login).map(x => x.login).pop() || m.login || "—")}</b></span>
+        <span>${esc(m.tel)}</span><button class="btn kichik" data-a="nusxa" data-v="${esc(m.tel)}" style="min-height:28px;padding:0 8px" aria-label="Telefonni nusxalash">${ic("nusxa", 14)}</button></div>
+      <div class="chat-r" id="chat-r">${chatHTML()}</div>
+      <div class="qator"><input id="c-matn" placeholder="Javob yozing…" style="flex:1 1 200px" maxlength="1000" autocomplete="off"><button class="btn asosiy kichik" data-a="chat-yoz">Yuborish</button></div>
+      <div class="qator" style="align-items:flex-end"><label class="maydon" style="flex:1 1 160px">Yangi parol (rahbar uchun)<input id="c-parol" value="${esc(H.parolTaklif)}" maxlength="64" autocomplete="off" spellcheck="false"></label>
+        <button class="btn yumshoq" data-a="parol-yubor" style="min-height:44px">${ic("kalit", 16)} Yangi parol yuborish</button></div>
+      <span class="muted sm">Avval rahbarga telefon qilib tekshiring. Yuborilgan parol markaz qurilmasida avtomatik o‘rnatiladi va chatda bir marta ko‘rinadi.</span>
+    </section>
 
     <section class="blok"><h3>Muddat</h3>
       <dl class="malumot"><dt>Bepul sinov</dt><dd>${sanaMatn(m.sinovTugash)} gacha</dd><dt>Obuna</dt><dd>${m.tugash ? sanaMatn(m.tugash) + " gacha" : "yo‘q"}</dd>
@@ -359,7 +421,7 @@ function chiqish(sabab) {
 const AMAL = {
   yangila: () => yukla(),
   chiqish: () => chiqish(),
-  yop: (el, e) => { if (e.target === el || el.classList.contains("yop")) { H.tanlangan = ""; H.tasdiq = ""; H.naqd = null; chiz(); } },
+  yop: (el, e) => { if (e.target === el || el.classList.contains("yop")) { H.tanlangan = ""; H.tasdiq = ""; H.naqd = null; H.chat = null; chiz(); } },
   uzaytir: el => ozgar({ tugash: el.dataset.sana }, `Obuna ${sanaMatn(el.dataset.sana)} gacha uzaytirildi`),
   sinov7: el => ozgar({ sinovTugash: el.dataset.sana }, `Sinov ${sanaMatn(el.dataset.sana)} gacha uzaytirildi`),
   "sana-saqla": () => { const v = $("#p-sana").value; ozgar({ tugash: v }, v ? `Obuna ${sanaMatn(v)} gacha` : "Obuna olib tashlandi"); },
@@ -372,6 +434,21 @@ const AMAL = {
   izoh: () => ozgar({ izoh: $("#p-izoh").value.trim() }, "Izoh saqlandi"),
   ochir: () => { H.tasdiq = "ochir"; chiz(); },
   korinish: el => { H.korinish = el.dataset.k; chiz(); },
+  qongiroq: () => { H.qongiroq = !H.qongiroq; chiz(); if (H.qongiroq) bildYangila(); },
+  suhbat: el => { H.qongiroq = false; H.tanlangan = el.dataset.m; H.tasdiq = ""; H.naqd = null; chatOch(el.dataset.m); },
+  "chat-yoz": async el => {
+    const i = $("#c-matn"), m = i.value.trim(); if (!m) return;
+    el.disabled = true;
+    try { const j = await sorov("admin_chat_yoz", { id: H.tanlangan, matn: m }); if (!j.ok) throw new Error(j.xato); i.value = ""; H.chat.xabarlar = j.xabarlar; chatChiz(); const r = $("#chat-r"); r.scrollTop = r.scrollHeight; }
+    catch (e) { toast("Yuborilmadi: " + e.message); } el.disabled = false;
+  },
+  "parol-yubor": async el => {
+    const p = $("#c-parol").value.trim();
+    if (p.length < 8) return toast("Parol kamida 8 belgi bo‘lsin");
+    el.disabled = true;
+    try { const j = await sorov("admin_chat_yoz", { id: H.tanlangan, matn: p, turi: "parol" }); if (!j.ok) throw new Error(j.xato); H.chat.xabarlar = j.xabarlar; chatChiz(); const r = $("#chat-r"); r.scrollTop = r.scrollHeight; toast("Yangi parol yuborildi"); }
+    catch (e) { toast("Yuborilmadi: " + e.message); } el.disabled = false;
+  },
   tiklash: async el => {
     el.disabled = true;
     try { const j = await sorov("admin_tiklash", { id: H.tanlangan }); if (!j.ok) throw new Error(j.xato); H.tiklash = { id: H.tanlangan, kod: j.kod, muddat: j.muddat, login: j.login }; chiz(); toast("Tiklash kodi yaratildi"); }
@@ -400,11 +477,13 @@ document.addEventListener("click", e => {
   const f = e.target.closest("[data-filtr]"); if (f) { H.filtr = f.dataset.filtr; chiz(); return; }
   const a = e.target.closest("[data-a]");
   if (a && AMAL[a.dataset.a]) { if (a.dataset.a !== "yop") e.stopPropagation(); AMAL[a.dataset.a](a, e); return; }
-  const r = e.target.closest("[data-id]"); if (r) { H.tanlangan = r.dataset.id; H.tasdiq = ""; chiz(); }
+  const r = e.target.closest("[data-id]"); if (r) { H.tanlangan = r.dataset.id; H.tasdiq = ""; H.naqd = null; H.qongiroq = false; chatOch(r.dataset.id); return; }
+  if (H.qongiroq && !e.target.closest(".bild-oyna")) { H.qongiroq = false; chiz(); }
 });
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && H.tanlangan) { H.tanlangan = ""; H.tasdiq = ""; chiz(); }
-  if (e.key === "Enter" && e.target.matches("tr[data-id]")) { H.tanlangan = e.target.dataset.id; chiz(); }
+  if (e.key === "Escape" && (H.tanlangan || H.qongiroq)) { H.tanlangan = ""; H.tasdiq = ""; H.chat = null; H.qongiroq = false; chiz(); }
+  if (e.key === "Enter" && e.target.matches("tr[data-id]")) { H.tanlangan = e.target.dataset.id; chatOch(e.target.dataset.id); }
+  if (e.key === "Enter" && e.target.id === "c-matn") AMAL["chat-yoz"]($('[data-a="chat-yoz"]'));
 });
 document.addEventListener("change", e => {
   if (e.target.id === "p-tarif" && e.target.value) { const v = e.target.value === "-" ? "" : e.target.value; ozgar({ tarif: v }, v ? `Tarif: ${tarifNom(v)}` : "Tarif olib tashlandi"); }
@@ -423,15 +502,21 @@ document.addEventListener("submit", async e => {
     const j = await sorov("admin_kirish");
     if (!j.ok) throw new Error(j.xato);
     try { sessionStorage.setItem("om-admin", p); } catch (er) {}
-    H.xato = ""; H.bugun = j.bugun; yukla();
+    H.xato = ""; H.bugun = j.bugun; yukla(); bildYangila();
   } catch (er) {
     H.parol = ""; b.disabled = false; b.textContent = "Kirish"; x.textContent = er.message; x.hidden = false;
   }
 });
 // Panel ochiq bo‘lmaganda ro‘yxat har 2 daqiqada yangilanadi
 setInterval(() => { if (H.parol && !H.tanlangan && document.visibilityState === "visible") yukla(true); }, 120000);
+// Qo‘ng‘iroqcha har 20 soniyada, ochiq chat har 6 soniyada yangilanadi
+setInterval(() => { if (H.parol && document.visibilityState === "visible") bildYangila(); }, 20000);
+setInterval(async () => {
+  if (!H.parol || !H.chat || !H.tanlangan || document.visibilityState !== "visible") return;
+  try { const id = H.chat.id, j = await sorov("admin_chat_ol", { id }); if (j.ok && H.chat && H.chat.id === id && JSON.stringify(j.xabarlar) !== JSON.stringify(H.chat.xabarlar)) { H.chat.xabarlar = j.xabarlar; chatChiz(); } } catch (e) {}
+}, 6000);
 chiz();
-if (H.parol) yukla();
+if (H.parol) { yukla(); bildYangila(); }
 </script>
 </body>
 </html>

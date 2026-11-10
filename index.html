@@ -730,6 +730,20 @@ pre.kod-blok { background: var(--surface-2); border: 1px solid var(--line); bord
 .tarif .t-shart { font-size:13px; color: var(--muted); }
 .tarif .t-ogoh { font-size:12px; color: var(--warn); font-weight:600; }
 .btn-katta { min-height:52px; font-size:16px; width:100%; }
+
+/* Sotuvchi bilan chat */
+.chat-karta { width: 100%; }
+.chat-royxat { display:flex; flex-direction:column; gap:8px; min-height:220px; max-height:min(52vh, 460px); overflow-y:auto; padding:12px; background: var(--surface-2); border-radius:14px; border:1px solid var(--line); }
+.chat-x { max-width:85%; padding:10px 12px; border-radius:14px; display:flex; flex-direction:column; gap:4px; font-size:14px; overflow-wrap:anywhere; }
+.chat-x b { display:inline-flex; align-items:center; gap:6px; }
+.chat-x.u-men { align-self:flex-end; background: var(--primary); color:#fff; border-bottom-right-radius:4px; }
+.chat-x.u-ular { align-self:flex-start; background: var(--surface); border:1px solid var(--line); border-bottom-left-radius:4px; }
+.chat-x .chat-vaqt { font-size:11px; opacity:.75; }
+.chat-x.parol-x { border:2px solid var(--ok, #047857); max-width:100%; }
+.chat-x.parol-x .btn { align-self:flex-start; margin-top:4px; }
+.parol-kod { font-family: ui-monospace, Consolas, monospace; font-size:18px; letter-spacing:.06em; user-select:all; }
+.chat-yoz { display:flex; gap:8px; }
+.chat-yoz input { flex:1; min-width:0; }
 </style>
 </head>
 <body>
@@ -754,7 +768,7 @@ pre.kod-blok { background: var(--surface-2); border: 1px solid var(--line); bord
    ===================================================================== */
 const SOZLAMALAR = {
   dasturNomi: "O‘quv Markaz CRM",
-  versiya: "1.2.0",              // har yangi versiyada oshiriladi (CHANGELOG.md)
+  versiya: "1.3.0",              // har yangi versiyada oshiriladi (CHANGELOG.md)
   markazNomi: "Bilim o‘quv markazi",     // dastur ichida «Sozlamalar»dan ham o‘zgartiriladi
   markazTel: "+998 90 000 00 00",
   logoMatni: "OM",
@@ -1222,6 +1236,7 @@ const ICONS = {
   home: "M3 11 12 4l9 7M5 10v10h5v-6h4v6h5V10",
   check: "M9 3h6v3H9zM8 4.5H5.5V21h13V4.5H16M9 13.5l2 2 4-4.5",
   check2: "M5 12.5l4.5 4.5L19.5 7",
+  key: "M14.5 9.5a4 4 0 1 0-3.9 4.9L9 16v2H7v2H4v-3l6.1-6.1A4 4 0 0 0 14.5 9.5zM16 7.5h.01",
   wallet: "M4 7.5h15a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5A2.5 2.5 0 0 1 5.5 4H17v3.5M16.5 14h.01",
   alert: "M12 3.5 2.5 20h19zM12 10v4.5M12 17.5h.01",
   grid: "M4 4h6.5v6.5H4zM13.5 4H20v6.5h-6.5zM4 13.5h6.5V20H4zM13.5 13.5H20V20h-6.5z",
@@ -1595,7 +1610,7 @@ function renderKirish() {
     const kutish = Math.max(0, Math.ceil((k.blok - Date.now()) / 1000));
     return `<div class="kirish">${bosh}
       <section class="card"><form id="kirish-forma" class="forma" novalidate>
-        ${k.tiklashOk ? `<div class="banner ok">${icon("check2")}<div class="b-mat"><b>Parol yangilandi!</b> Loginingiz: <b>${esc(k.tiklashOk)}</b>. Endi yangi parol bilan kiring.</div></div>`
+        ${k.tiklashOk ? `<div class="banner ok">${icon("check2")}<div class="b-mat"><b>Parol yangilandi!</b> Loginingiz: <b>${esc(k.tiklashOk)}</b>. Sotuvchi yuborgan yangi parol bilan kiring.</div></div>`
           : k.royxatOk ? `<div class="banner ok">${icon("check2")}<div class="b-mat"><b>Ro‘yxatdan o‘tdingiz!</b> ${SOZLAMALAR.sinovKun} kunlik bepul sinov ${sanaMatn(L.sinovTugash)} gacha. Endi login va parolingizni yozib kiring.</div></div>`
           : bor ? `<div class="info-quti"><b>${esc(markazNomi())}</b></div>` : ""}
         <label class="maydon"><span>Login</span><input id="k-login" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Loginingiz" value="${esc(k.tiklashOk || "")}" autofocus></label>
@@ -1603,27 +1618,22 @@ function renderKirish() {
         <p class="xato" id="k-xato" ${kutish ? "" : "hidden"}>${kutish ? `Ko‘p marta xato kiritildi. ${kutish} soniyadan keyin urinib ko‘ring.` : ""}</p>
         <button type="submit" class="btn btn-primary btn-blok" ${kutish ? "disabled" : ""}>Kirish</button>
         <p class="muted sm" style="margin:0">Xodimlar login va parolni markaz rahbaridan oladi.</p>
-        ${bor && L.markazId ? `<button type="button" class="btn btn-ghost btn-sm" data-act="kirish-tab" data-v="tiklash" style="align-self:flex-start">Parolni unutdingizmi?</button>` : ""}
+        ${bor && L.markazId ? `<button type="button" class="btn btn-ghost btn-sm" data-act="parol-unutdim" style="align-self:flex-start">${icon("message", 16)} Parolni unutdim</button>` : ""}
       </form></section>
       ${bor ? "" : `<section class="card forma"><b>Bu qurilmada hali markaz yo‘q</b>
         <p class="muted sm" style="margin:0">Hamkor markaz bo‘lsangiz, rahbaringizdan zaxira faylni olib tiklang. Yangi markaz bo‘lsangiz, ro‘yxatdan o‘ting: 14 kun bepul.</p>
         <div class="amal-qator"><button class="btn btn-soft" data-act="kirish-tab" data-v="royxat">Ro‘yxatdan o‘tish</button><button class="btn btn-ghost" data-act="tikla-fayl">${icon("upload", 18)} Zaxiradan tiklash</button></div></section>`}
       ${pas}</div>`;
   }
-  if (k.tab === "tiklash") return `<div class="kirish">${bosh}
-    <section class="card"><form id="tiklash-forma" class="forma" novalidate>
-      <h2 style="margin:0;font-size:18px">Rahbar parolini tiklash</h2>
-      <ol class="muted sm" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
-        <li>Sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : ""}. U sizga 6 xonali tiklash kodini beradi (24 soat amal qiladi).</li>
-        <li>Kodni va yangi parolni shu yerga yozing.</li></ol>
-      <label class="maydon"><span>Tiklash kodi</span><input id="t-kod" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 xonali kod"></label>
-      ${parolMaydon("t-parol", "Yangi parol (kamida 8 belgi)", { yangi: true, erkin: true })}
-      ${parolMaydon("t-parol2", "Yangi parolni takrorlang", { yangi: true, erkin: true })}
-      <p class="xato" id="t-xato" hidden></p>
-      <button type="submit" class="btn btn-primary btn-blok">Parolni yangilash</button>
-      <p class="muted sm" style="margin:0">Xodim bo‘lsangiz, parolingizni markaz rahbari yangilaydi: Sozlamalar → Xodimlar.</p>
-      <button type="button" class="btn btn-ghost btn-sm" data-act="kirish-tab" data-v="kirish" style="align-self:flex-start">← Kirishga qaytish</button>
-    </form></section>${pas}</div>`;
+  if (k.tab === "yordam") return `<div class="kirish">${bosh}
+    <section class="card forma chat-karta">
+      <div class="card-h" style="margin:0"><h2 style="font-size:18px;margin:0">Sotuvchi bilan chat</h2><button type="button" class="btn btn-ghost btn-sm" data-act="kirish-tab" data-v="kirish">← Kirish</button></div>
+      <p class="muted sm" style="margin:0">So‘rovingiz sotuvchiga yuborildi. U sizga ${SOZLAMALAR.sotuvchi.tel ? "telefon qilib" : ""} tekshiradi va shu yerga yangi parol yuboradi: parol qurilmangizda o‘zi o‘rnatiladi. Oynani yopmang.</p>
+      <div class="chat-royxat" id="chat-royxat" aria-live="polite">${chatXabarlarHTML()}</div>
+      <form id="chat-forma" class="chat-yoz" novalidate><input id="chat-matn" placeholder="Xabar yozing…" autocomplete="off" maxlength="1000" aria-label="Xabar">
+        <button type="submit" class="btn btn-primary">Yuborish</button></form>
+      <p class="xato" id="chat-xato" hidden></p>
+    </section>${pas}</div>`;
   return `<div class="kirish">${bosh}
     <section class="card"><form id="royxat-forma" class="forma" novalidate>
       <p class="muted" style="margin:0">O‘quv markazingiz haqida ma’lumot kiriting va dasturdan <b>${SOZLAMALAR.sinovKun} kun bepul</b> foydalaning.</p>
@@ -2549,7 +2559,7 @@ const AMALLAR = {
       <div class="sheet-actions"><button type="button" class="btn btn-ghost" data-act="modal-yop">Bekor qilish</button><button type="submit" class="btn btn-primary">Saqlash</button></div></form>`),
 
   // Kirish ekrani
-  "kirish-tab": el => { UI.kirish.tab = el.dataset.v; UI.kirish.royxatOk = false; UI.kirish.tiklashOk = ""; render(); },
+  "kirish-tab": el => { UI.kirish.tab = el.dataset.v; UI.kirish.royxatOk = false; UI.kirish.tiklashOk = ""; chatTaymer(false); render(); },
   "parol-korsat": el => { const i = document.getElementById(el.dataset.target); if (i) i.type = i.type === "password" ? "text" : "password"; },
   "parol-yarat": el => { const i = document.getElementById(el.dataset.target); if (i) { i.value = parolYasa(); i.type = "text"; } },
   "litsenziya-och": () => { UI.sozTab = "litsenziya"; ot("sozlamalar"); },
@@ -2715,21 +2725,9 @@ const FORMALAR = {
     if (!l.trim() || !p) return xatoKorsat("#k-xato", "Login va parolni kiriting.");
     kirishTekshir(l, p);
   },
-  // Rahbar parolini sotuvchi bergan tiklash kodi bilan yangilash
-  "tiklash-forma": async f => {
-    const kod = $("#t-kod").value.replace(/\D/g, ""), p1 = $("#t-parol").value, p2 = $("#t-parol2").value, L = DB.litsenziya;
-    if (kod.length !== 6) return xatoKorsat("#t-xato", "6 xonali tiklash kodini kiriting.");
-    if (p1.length < 8) return xatoKorsat("#t-xato", "Yangi parol kamida 8 belgidan iborat bo‘lsin.");
-    if (p1 !== p2) return xatoKorsat("#t-xato", "Parollar bir xil emas.");
-    const d = DB.xodimlar.find(x => x.rol === "direktor" && x.faol !== false) || DB.xodimlar.find(x => x.rol === "direktor");
-    if (!d) return xatoKorsat("#t-xato", "Bu qurilmada rahbar topilmadi.");
-    const tugma = f.querySelector('[type="submit"]'); tugma.disabled = true; tugma.textContent = "Tekshirilmoqda…";
-    let j;
-    try { j = await Server.sorov("parol_tiklash", { id: L.markazId, token: L.token, kod }); }
-    catch (e) { j = { ok: false, xato: "Internet yo‘q yoki server javob bermadi." }; }
-    if (!j.ok) { tugma.disabled = false; tugma.textContent = "Parolni yangilash"; return xatoKorsat("#t-xato", j.xato || "Kod qabul qilinmadi."); }
-    Ombor.yoz("xodimlar", { ...d, pinXesh: await pinXesh(p1), faol: true });
-    UI.kirish = { tab: "kirish", xato: 0, blok: 0, tiklashOk: d.login }; render();
+  "chat-forma": async () => {
+    const i = $("#chat-matn"), m = i.value.trim(); if (!m) return;
+    i.value = ""; await chatYubor(m, "matn");
   },
   // Yangi markaz: ma’lumotlar + rahbar paroli → 14 kunlik sinov
   "royxat-forma": async () => {
@@ -4051,6 +4049,77 @@ async function tolovKut(marta = 12) {
   if (marta === 1) toast(L.kutilayotgan ? "To‘lov hali tushmagan. Bir ozdan keyin yana tekshiring." : "Kutilayotgan to‘lov yo‘q", "warn");
   return false;
 }
+
+/* ---------- «Parolni unutdim»: sotuvchi bilan chat ----------
+   Xabarlar serverda (Google jadval). Sotuvchi chatga yangi parol yuborsa,
+   u rahbar akkauntiga shu qurilmada o‘rnatiladi va bir marta ko‘rsatiladi. */
+const CHAT = { xabarlar: [], taymer: null, yangi: null };
+const direktor = () => DB.xodimlar.find(x => x.rol === "direktor" && x.faol !== false) || DB.xodimlar.find(x => x.rol === "direktor");
+const vaqtMatn = ms => { const d = new Date(+ms); return `${sanaStr(d) === bugun() ? "" : sanaMatn(sanaStr(d)) + ", "}${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+function chatXabarlarHTML() {
+  if (!CHAT.xabarlar.length) return `<p class="muted sm" style="margin:auto;text-align:center">Yuklanmoqda…</p>`;
+  return CHAT.xabarlar.map(x => {
+    const men = x.kimdan === "markaz";
+    if (x.turi === "parol") {
+      const y = CHAT.yangi && CHAT.yangi.id === x.id ? CHAT.yangi : null;
+      return `<div class="chat-x u-ular parol-x"><b>${icon("check2", 16)} Yangi parol</b>
+        ${y ? `<span>Login: <b>${esc(y.login)}</b></span><span>Parol: <b class="parol-kod">${esc(y.parol)}</b></span><span class="sm">Parol qurilmangizda o‘rnatildi. Uni yozib oling.</span>
+          <button type="button" class="btn btn-primary btn-sm" data-act="chat-kirish">Kirish</button>` : `<span class="sm">Yangi parol avval yuborilgan va o‘rnatilgan.</span>`}
+        <span class="chat-vaqt">${vaqtMatn(x.vaqt)}</span></div>`;
+    }
+    return `<div class="chat-x ${men ? "u-men" : "u-ular"}">${x.turi === "parol_sorov" ? `<b>${icon("key", 14)} Parolni unutdim</b>` : esc(x.matn)}<span class="chat-vaqt">${men ? "Siz" : esc(SOZLAMALAR.sotuvchi.nom)} · ${vaqtMatn(x.vaqt)}</span></div>`;
+  }).join("");
+}
+function chatChiz() {
+  const r = $("#chat-royxat"); if (!r) return;
+  const pastda = r.scrollHeight - r.scrollTop - r.clientHeight < 40;
+  r.innerHTML = chatXabarlarHTML();
+  if (pastda || CHAT.yangi) r.scrollTop = r.scrollHeight;
+}
+async function chatQabul(l) {
+  for (const x of l) {
+    // Sotuvchi yuborgan yangi parol (bir marta ochiq keladi) — rahbar akkauntiga o‘rnatiladi
+    if (x.kimdan === "admin" && x.turi === "parol" && x.matn && !/^•+$/.test(x.matn)) {
+      const d = direktor();
+      if (d) { Ombor.yoz("xodimlar", { ...d, pinXesh: await pinXesh(x.matn), faol: true }); CHAT.yangi = { id: x.id, parol: x.matn, login: d.login }; }
+    }
+  }
+  CHAT.xabarlar = l; chatChiz();
+}
+async function chatYangila() {
+  const L = DB.litsenziya;
+  try { const j = await Server.sorov("chat_ol", { id: L.markazId, token: L.token }); if (j.ok) await chatQabul(j.xabarlar || []); }
+  catch (e) {}
+}
+async function chatYubor(matn, turi) {
+  const L = DB.litsenziya, d = direktor();
+  try {
+    const j = await Server.sorov("chat_yoz", { id: L.markazId, token: L.token, matn, turi, login: d ? d.login : "" });
+    if (!j.ok) throw new Error(j.xato);
+    await chatQabul(j.xabarlar || []);
+  } catch (e) { xatoKorsat("#chat-xato", "Yuborilmadi: " + (e.name === "TypeError" ? "internet yo‘q" : e.message)); }
+}
+function chatTaymer(yoq) {
+  clearInterval(CHAT.taymer); CHAT.taymer = null;
+  if (yoq) CHAT.taymer = setInterval(() => { if (UI.kirish.tab === "yordam" && Ilova.holat === "kirish") chatYangila(); else chatTaymer(false); }, 6000);
+}
+Object.assign(AMALLAR, {
+  "parol-unutdim": async () => {
+    UI.kirish.tab = "yordam"; CHAT.xabarlar = []; CHAT.yangi = null; render();
+    await chatYangila();
+    // Javobsiz so‘rov yarim soat ichida yuborilgan bo‘lsa, qayta yubormaydi
+    const l = CHAT.xabarlar, oxirgiAdmin = Math.max(0, ...l.filter(x => x.kimdan === "admin").map(x => +x.vaqt));
+    const ochiqSorov = l.some(x => x.turi === "parol_sorov" && +x.vaqt > oxirgiAdmin && Date.now() - x.vaqt < 30 * 60000);
+    if (!ochiqSorov) await chatYubor("Parolni unutdim", "parol_sorov");
+    else chatChiz();
+    chatTaymer(true);
+  },
+  "chat-kirish": () => {
+    const login = CHAT.yangi ? CHAT.yangi.login : "";
+    chatTaymer(false); UI.kirish = { tab: "kirish", xato: 0, blok: 0, tiklashOk: login }; render();
+    const p = $("#k-parol"); if (p) p.focus();
+  },
+});
 
 
 /* =====================================================================

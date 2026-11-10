@@ -27,7 +27,7 @@ const AMALLAR = {
       <div class="sheet-actions"><button type="button" class="btn btn-ghost" data-act="modal-yop">Bekor qilish</button><button type="submit" class="btn btn-primary">Saqlash</button></div></form>`),
 
   // Kirish ekrani
-  "kirish-tab": el => { UI.kirish.tab = el.dataset.v; UI.kirish.royxatOk = false; UI.kirish.tiklashOk = ""; render(); },
+  "kirish-tab": el => { UI.kirish.tab = el.dataset.v; UI.kirish.royxatOk = false; UI.kirish.tiklashOk = ""; chatTaymer(false); render(); },
   "parol-korsat": el => { const i = document.getElementById(el.dataset.target); if (i) i.type = i.type === "password" ? "text" : "password"; },
   "parol-yarat": el => { const i = document.getElementById(el.dataset.target); if (i) { i.value = parolYasa(); i.type = "text"; } },
   "litsenziya-och": () => { UI.sozTab = "litsenziya"; ot("sozlamalar"); },
@@ -193,21 +193,9 @@ const FORMALAR = {
     if (!l.trim() || !p) return xatoKorsat("#k-xato", "Login va parolni kiriting.");
     kirishTekshir(l, p);
   },
-  // Rahbar parolini sotuvchi bergan tiklash kodi bilan yangilash
-  "tiklash-forma": async f => {
-    const kod = $("#t-kod").value.replace(/\D/g, ""), p1 = $("#t-parol").value, p2 = $("#t-parol2").value, L = DB.litsenziya;
-    if (kod.length !== 6) return xatoKorsat("#t-xato", "6 xonali tiklash kodini kiriting.");
-    if (p1.length < 8) return xatoKorsat("#t-xato", "Yangi parol kamida 8 belgidan iborat bo‘lsin.");
-    if (p1 !== p2) return xatoKorsat("#t-xato", "Parollar bir xil emas.");
-    const d = DB.xodimlar.find(x => x.rol === "direktor" && x.faol !== false) || DB.xodimlar.find(x => x.rol === "direktor");
-    if (!d) return xatoKorsat("#t-xato", "Bu qurilmada rahbar topilmadi.");
-    const tugma = f.querySelector('[type="submit"]'); tugma.disabled = true; tugma.textContent = "Tekshirilmoqda…";
-    let j;
-    try { j = await Server.sorov("parol_tiklash", { id: L.markazId, token: L.token, kod }); }
-    catch (e) { j = { ok: false, xato: "Internet yo‘q yoki server javob bermadi." }; }
-    if (!j.ok) { tugma.disabled = false; tugma.textContent = "Parolni yangilash"; return xatoKorsat("#t-xato", j.xato || "Kod qabul qilinmadi."); }
-    Ombor.yoz("xodimlar", { ...d, pinXesh: await pinXesh(p1), faol: true });
-    UI.kirish = { tab: "kirish", xato: 0, blok: 0, tiklashOk: d.login }; render();
+  "chat-forma": async () => {
+    const i = $("#chat-matn"), m = i.value.trim(); if (!m) return;
+    i.value = ""; await chatYubor(m, "matn");
   },
   // Yangi markaz: ma’lumotlar + rahbar paroli → 14 kunlik sinov
   "royxat-forma": async () => {
