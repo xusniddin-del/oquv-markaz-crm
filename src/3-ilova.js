@@ -190,13 +190,23 @@ function renderKirish() {
         <p class="xato" id="k-xato" ${kutish ? "" : "hidden"}>${kutish ? `Ko‘p marta xato kiritildi. ${kutish} soniyadan keyin urinib ko‘ring.` : ""}</p>
         <button type="submit" class="btn btn-primary btn-blok" ${kutish ? "disabled" : ""}>Kirish</button>
         <p class="muted sm" style="margin:0">Xodimlar login va parolni markaz rahbaridan oladi.</p>
-        ${bor && L.markazId ? `<button type="button" class="btn btn-ghost btn-sm" data-act="parol-unutdim" style="align-self:flex-start">${icon("message", 16)} Parolni unutdim</button>` : ""}
+        <button type="button" class="btn btn-ghost btn-sm" data-act="parol-unutdim" style="align-self:flex-start">${icon("message", 16)} Parolni unutdim</button>
       </form></section>
       ${bor ? "" : `<section class="card forma"><b>Bu qurilmada hali markaz yo‘q</b>
         <p class="muted sm" style="margin:0">Hamkor markaz bo‘lsangiz, rahbaringizdan zaxira faylni olib tiklang. Yangi markaz bo‘lsangiz, ro‘yxatdan o‘ting: 14 kun bepul.</p>
         <div class="amal-qator"><button class="btn btn-soft" data-act="kirish-tab" data-v="royxat">Ro‘yxatdan o‘tish</button><button class="btn btn-ghost" data-act="tikla-fayl">${icon("upload", 18)} Zaxiradan tiklash</button></div></section>`}
       ${pas}</div>`;
   }
+  if (k.tab === "yordam" && !(bor && L.markazId)) return `<div class="kirish">${bosh}
+    <section class="card forma">
+      <h2 style="margin:0;font-size:18px">Bu qurilmada markazingiz yo‘q</h2>
+      <p class="muted" style="margin:0">Markaz ma’lumotlari (o‘quvchilar, to‘lovlar, login va parol) faqat ro‘yxatdan o‘tgan <b>qurilma va brauzerda</b> saqlanadi. Shu sababli bu yerda parolni tiklab bo‘lmaydi.</p>
+      <ol class="muted sm" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+        <li>Markazingiz ishlatilgan kompyuter yoki telefonda, <b>o‘sha brauzerda</b> (Chrome, Edge…) shu sahifani oching va «Parolni unutdim» ni bosing.</li>
+        <li>Yangi qurilmaga o‘tmoqchi bo‘lsangiz: eski qurilmada Sozlamalar → Ma’lumotlar → <b>Zaxira olish</b>, keyin bu yerda <b>Zaxiradan tiklash</b>.</li>
+        <li>Eski qurilma yo‘q bo‘lsa, sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : ""}.</li></ol>
+      <div class="amal-qator"><button type="button" class="btn btn-ghost" data-act="kirish-tab" data-v="kirish">← Kirish</button><button class="btn btn-soft" data-act="tikla-fayl">${icon("upload", 18)} Zaxiradan tiklash</button></div>
+    </section>${pas}</div>`;
   if (k.tab === "yordam") return `<div class="kirish">${bosh}
     <section class="card forma chat-karta">
       <div class="card-h" style="margin:0"><h2 style="font-size:18px;margin:0">Sotuvchi bilan chat</h2><button type="button" class="btn btn-ghost btn-sm" data-act="kirish-tab" data-v="kirish">← Kirish</button></div>

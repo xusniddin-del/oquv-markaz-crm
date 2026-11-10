@@ -258,6 +258,7 @@ function chatTaymer(yoq) {
 Object.assign(AMALLAR, {
   "parol-unutdim": async () => {
     UI.kirish.tab = "yordam"; CHAT.xabarlar = []; CHAT.yangi = null; render();
+    if (!(markazBor() && DB.litsenziya.markazId)) return;   // bu qurilmada markaz yo‘q — tushuntirish oynasi
     await chatYangila();
     // Javobsiz so‘rov yarim soat ichida yuborilgan bo‘lsa, qayta yubormaydi
     const l = CHAT.xabarlar, oxirgiAdmin = Math.max(0, ...l.filter(x => x.kimdan === "admin").map(x => +x.vaqt));
