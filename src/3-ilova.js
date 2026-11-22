@@ -44,7 +44,7 @@ const Ilova = {
   maLumotTayyor() {
     const m = men();
     this.holat = Sessiya.xodimId && m && m.faol !== false ? "ichida" : "kirish";
-    if (this.holat === "kirish" && !markazBor()) UI.kirish.tab = "royxat";
+    // Yangi qurilmada ham avval «Kirish»: markaz boshqa joyda ro‘yxatdan o‘tgan bo‘lsa, login bilan kiradi (ro‘yxat tugmasi shu oynada)
     rejaRender();
   },
 };
@@ -139,6 +139,8 @@ function renderBanner() {
     <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Tarif tanlash</button></div>`;
   else if (direktorMi() && !DB.meta.demo && L.tur === "faol" && L.qoldi <= 7) h += `<div class="banner" role="status">${icon("alert")}<div class="b-mat"><b>Obuna ${L.qoldi === 0 ? "bugun" : `${L.qoldi} kundan keyin`} tugaydi</b> (${sanaMatn(L.tugash)}). ${aloqa}</div>
     <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Uzaytirish</button></div>`;
+  if (Ombor.xato) h += `<div class="banner xavf" role="alert">${icon("alert")}<div class="b-mat"><b>Brauzer xotirasi to‘ldi — oxirgi o‘zgarishlar saqlanmayapti.</b> Sahifani yopmang: darhol zaxira oling va sotuvchiga murojaat qiling.</div>
+    <button class="btn btn-sm btn-primary" data-act="zaxira">${icon("download", 18)} Zaxira olish</button></div>`;
   if (!Mahalliy.ishlaydi) h += `<div class="banner xavf" role="alert">${icon("alert")}<div class="b-mat"><b>Brauzer xotirasi ishlamayapti.</b> Ma’lumotlar sahifa yopilganda o‘chadi. Ishni tugatgach albatta zaxira oling.</div></div>`;
   if (direktorMi() && !UI.bannerYopildi && (OQ().length || GR().length)) {
     const z = DB.meta.oxirgiZaxira, kun = z ? kunFarqi(z, bugun()) : null;
@@ -187,25 +189,27 @@ function renderKirish() {
           : bor ? `<div class="info-quti"><b>${esc(markazNomi())}</b></div>` : ""}
         <label class="maydon"><span>Login</span><input id="k-login" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Loginingiz" value="${esc(k.tiklashOk || "")}" autofocus></label>
         ${parolMaydon("k-parol", "Parol", { erkin: true })}
+        ${bor ? "" : `<label class="sm muted" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="k-begona"> Bu mening qurilmam emas — chiqqanda ma’lumotlar bu yerdan o‘chirilsin</label>`}
         <p class="xato" id="k-xato" ${kutish ? "" : "hidden"}>${kutish ? `Ko‘p marta xato kiritildi. ${kutish} soniyadan keyin urinib ko‘ring.` : ""}</p>
         <button type="submit" class="btn btn-primary btn-blok" ${kutish ? "disabled" : ""}>Kirish</button>
         <p class="muted sm" style="margin:0">Xodimlar login va parolni markaz rahbaridan oladi.</p>
         <button type="button" class="btn btn-ghost btn-sm" data-act="parol-unutdim" style="align-self:flex-start">${icon("message", 16)} Parolni unutdim</button>
       </form></section>
       ${bor ? "" : `<section class="card forma"><b>Bu qurilmada hali markaz yo‘q</b>
-        <p class="muted sm" style="margin:0">Hamkor markaz bo‘lsangiz, rahbaringizdan zaxira faylni olib tiklang. Yangi markaz bo‘lsangiz, ro‘yxatdan o‘ting: 14 kun bepul.</p>
+        <p class="muted sm" style="margin:0">Markazingiz boshqa kompyuter yoki telefonda ro‘yxatdan o‘tgan bo‘lsa — yuqorida login va parolingiz bilan kiring, ma’lumotlar serverdan yuklanadi. Yangi markaz bo‘lsangiz, ro‘yxatdan o‘ting: ${SOZLAMALAR.sinovKun} kun bepul.</p>
         <div class="amal-qator"><button class="btn btn-soft" data-act="kirish-tab" data-v="royxat">Ro‘yxatdan o‘tish</button><button class="btn btn-ghost" data-act="tikla-fayl">${icon("upload", 18)} Zaxiradan tiklash</button></div></section>`}
       ${pas}</div>`;
   }
   if (k.tab === "yordam" && !(bor && L.markazId)) return `<div class="kirish">${bosh}
     <section class="card forma">
-      <h2 style="margin:0;font-size:18px">Bu qurilmada markazingiz yo‘q</h2>
-      <p class="muted" style="margin:0">Markaz ma’lumotlari (o‘quvchilar, to‘lovlar, login va parol) faqat ro‘yxatdan o‘tgan <b>qurilma va brauzerda</b> saqlanadi. Shu sababli bu yerda parolni tiklab bo‘lmaydi.</p>
-      <ol class="muted sm" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
-        <li>Markazingiz ishlatilgan kompyuter yoki telefonda, <b>o‘sha brauzerda</b> (Chrome, Edge…) shu sahifani oching va «Parolni unutdim» ni bosing.</li>
-        <li>Yangi qurilmaga o‘tmoqchi bo‘lsangiz: eski qurilmada Sozlamalar → Ma’lumotlar → <b>Zaxira olish</b>, keyin bu yerda <b>Zaxiradan tiklash</b>.</li>
-        <li>Eski qurilma yo‘q bo‘lsa, sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : ""}.</li></ol>
-      <div class="amal-qator"><button type="button" class="btn btn-ghost" data-act="kirish-tab" data-v="kirish">← Kirish</button><button class="btn btn-soft" data-act="tikla-fayl">${icon("upload", 18)} Zaxiradan tiklash</button></div>
+      <h2 style="margin:0;font-size:18px">Parolni unutdingizmi?</h2>
+      <p class="muted" style="margin:0">Rahbar loginingizni yozing. Sotuvchi ro‘yxatdan o‘tishda yozilgan telefon raqamingizga qo‘ng‘iroq qilib, yangi parolni aytadi. Xodim bo‘lsangiz, parolni rahbaringizdan so‘rang.</p>
+      <div id="ps-joy" class="forma" style="padding:0">
+        <label class="maydon"><span>Rahbar logini</span><input id="ps-login" autocapitalize="none" spellcheck="false" placeholder="masalan, bilim.akmal"></label>
+        <p class="xato" id="ps-xato" hidden></p>
+        <button type="button" class="btn btn-primary" data-act="parol-sorov-login">So‘rov yuborish</button>
+      </div>
+      <div class="amal-qator"><button type="button" class="btn btn-ghost" data-act="kirish-tab" data-v="kirish">← Kirish</button></div>
     </section>${pas}</div>`;
   if (k.tab === "yordam") return `<div class="kirish">${bosh}
     <section class="card forma chat-karta">
@@ -239,6 +243,16 @@ async function kirishTekshir(login, parol) {
     Sessiya.qoy(x.id); k.xato = 0; UI.bolim = "bosh"; UI.dav = null; Ilova.holat = "ichida";
     try { history.replaceState(null, "", "#bosh"); } catch (e) {}
     render(); toast(`Xush kelibsiz, ${x.ism.split(" ")[0]}!`); return;
+  }
+  // Bu qurilmada topilmadi yoki parol boshqa joyda o‘zgargan — serverdan tekshiriladi (istalgan qurilmadan kirish)
+  const tugma = $('#kirish-forma [type="submit"]'); if (tugma) { tugma.disabled = true; tugma.textContent = "Tekshirilmoqda…"; }
+  const sx = await Sinx.serverKirish(login, parol, x);
+  if (tugma) { tugma.disabled = false; tugma.textContent = "Kirish"; }
+  if (sx === "xato") return;
+  if (sx) {
+    Sessiya.qoy(sx.id); k.xato = 0; UI.bolim = "bosh"; UI.dav = null; Ilova.holat = "ichida";
+    try { history.replaceState(null, "", "#bosh"); } catch (e) {}
+    render(); Server.tekshir(); toast(`Xush kelibsiz, ${sx.ism.split(" ")[0]}!`); return;
   }
   k.xato++;
   if (k.xato >= SOZLAMALAR.parolUrinish) { k.blok = Date.now() + 30000; k.xato = 0; render(); setTimeout(render, 30500); return; }

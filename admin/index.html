@@ -162,7 +162,8 @@ const IC = {
 const ic = (n, s = 18) => `<svg class="ic" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true"><path d="${IC[n]}"/></svg>`;
 
 const H = {
-  parol: (() => { try { return sessionStorage.getItem("om-admin") || ""; } catch (e) { return ""; } })(),
+  parol: "",   // faqat kirish paytida; keyin server bergan sessiya kaliti ishlatiladi
+  sessiya: (() => { try { return sessionStorage.getItem("om-admin-s") || ""; } catch (e) { return ""; } })(),
   markazlar: [], tolovlar: [], tariflar: [], oylar: [1, 3, 6, 12], tolovYoqilgan: true, bugun: "", yuklanmoqda: false, xato: "",
   filtr: "hammasi", qidiruv: "", tanlangan: "", tasdiq: "", korinish: "markazlar", naqd: null,
   bildirish: { soni: 0, suhbatlar: [] }, qongiroq: false, chat: null, parolTaklif: "",
@@ -172,7 +173,7 @@ async function sorov(amal, d = {}) {
   if (!SERVER) throw new Error("Server manzili sozlanmagan (SERVER).");
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), 30000);
   try {
-    const r = await fetch(SERVER, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ amal, parol: H.parol, ...d }), signal: ac.signal, redirect: "follow" });
+    const r = await fetch(SERVER, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ amal, ...(H.sessiya ? { sessiya: H.sessiya } : { parol: H.parol }), ...d }), signal: ac.signal, redirect: "follow" });
     if (!r.ok) throw new Error("Server javobi: " + r.status);
     const j = await r.json();
     if (!j.ok && (j.kod === "parol" || j.kod === "blok")) { chiqish(j.xato); throw new Error(j.xato); }
@@ -204,7 +205,7 @@ const oyTushum = oy => tolanganlar().filter(t => (t.tolandi || "").slice(0, 7) =
 /* ---------- Chizish ---------- */
 function chiz() {
   const ilova = $("#ilova");
-  if (!H.parol) { ilova.innerHTML = kirishOyna(); setTimeout(() => $("#parol") && $("#parol").focus(), 30); return; }
+  if (!H.sessiya) { ilova.innerHTML = kirishOyna(); setTimeout(() => $("#parol") && $("#parol").focus(), 30); return; }
   const l = H.markazlar, b = H.bugun;
   const sana = t => l.filter(m => mos(m, t)).length;
   const qidir = H.qidiruv.trim().toLowerCase(), qd = qidir.replace(/\D/g, "");
@@ -271,7 +272,7 @@ function bildOyna() {
     ${l.length ? l.map(g => { const m = H.markazlar.find(x => x.id === g.markazId) || {};
       return `<button class="bild${g.oqilmagan ? " yangi" : ""}" data-a="suhbat" data-m="${esc(g.markazId)}">
         <b>${esc(g.markaz)}</b><span class="muted sm">${vaqtM(g.oxirgi.vaqt)}</span>
-        <span class="sm">${g.parolSorov ? `<span class="pill warn">${ic("kalit", 12)} Parolni unutdi</span> ` : ""}${g.oxirgi.kimdan === "admin" ? "Siz: " : ""}${esc(g.oxirgi.turi === "parol_sorov" ? "Parolni unutdim" : g.oxirgi.turi === "parol" ? "Yangi parol yuborildi" : g.oxirgi.matn).slice(0, 80)}</span>
+        <span class="sm">${g.parolSorov ? `<span class="pill warn">${ic("kalit", 12)} Parolni unutdi</span> ` : ""}${g.oxirgi.kimdan === "admin" ? "Siz: " : ""}${esc(String(g.oxirgi.turi === "parol_sorov" ? "Parolni unutdim" : g.oxirgi.turi === "parol" ? "Yangi parol yuborildi" : g.oxirgi.matn).slice(0, 80))}</span>
         ${g.oqilmagan ? `<span class="pill bad">${g.oqilmagan}</span>` : "<span></span>"}
         <span class="muted sm" style="grid-column:1/-1">${esc(m.rahbar || "")}${m.tel ? " · " + esc(m.tel) : ""}</span></button>`; }).join("")
       : `<p class="muted sm" style="padding:16px;margin:0">Hozircha xabar yo‘q. Markaz CRM’da «Parolni unutdim» ni bossa, shu yerda paydo bo‘ladi.</p>`}</div>`;
@@ -361,14 +362,6 @@ function panel() {
         : `<p class="muted sm" style="margin:0">Bloklangan markaz dasturga kira olmaydi, lekin ma’lumotlari o‘chmaydi.</p><div class="qator"><button class="btn xavfli" data-a="blok">${ic("qulf")} Bloklash</button></div>`}
     </section>
 
-    <section class="blok"><h3>Rahbar parolini tiklash</h3>
-      <p class="muted sm" style="margin:0">Rahbar parolini unutsa: kod yarating va unga telefon yoki Telegram orqali ayting. U CRM kirish oynasida «Parolni unutdingizmi?» ni bosib, kod va yangi parolni kiritadi. Kod 24 soat amal qiladi.</p>
-      ${H.tiklash && H.tiklash.id === m.id ? `<div class="tasdiq" style="background:var(--primary-soft)"><span class="sm">Tiklash kodi:</span>
-          <b style="font-size:30px;letter-spacing:.18em;font-variant-numeric:tabular-nums">${esc(H.tiklash.kod)}</b>
-          <span class="sm">Rahbar logini: <b>${esc(H.tiklash.login || m.login || "—")}</b> · ${esc(H.tiklash.muddat)} gacha</span>
-          <div class="qator"><button class="btn kichik" data-a="nusxa" data-v="${esc(H.tiklash.kod)}">${ic("nusxa", 14)} Nusxalash</button></div></div>` : ""}
-      <div class="qator"><button class="btn kichik" data-a="tiklash">${H.tiklash && H.tiklash.id === m.id ? "Yangi kod yaratish" : "Tiklash kodi yaratish"}</button></div>
-    </section>
 
     <section class="blok"><h3>Markazga xabar</h3>
       <p class="muted sm" style="margin:0">Xabar markaz dasturining tepasida chiqadi. Bloklanganda yoki muddat tugaganda ham ko‘rinadi.</p>
@@ -400,7 +393,7 @@ async function yukla(jim) {
   H.yuklanmoqda = true; if (!jim) chiz();
   try { const j = await sorov("admin_royxat", { tekshir: !jim }); if (!j.ok) throw new Error(j.xato);
     H.markazlar = j.markazlar; H.tolovlar = j.tolovlar || []; H.tariflar = j.tariflar || []; H.oylar = j.oylar || H.oylar; H.tolovYoqilgan = j.tolovYoqilgan !== false; H.bugun = j.bugun; H.xato = ""; }
-  catch (e) { if (H.parol) H.xato = "Yuklab bo‘lmadi: " + e.message; }
+  catch (e) { if (H.sessiya) H.xato = "Yuklab bo‘lmadi: " + e.message; }
   H.yuklanmoqda = false; chiz();
 }
 async function ozgar(maydonlar, xabar) {
@@ -414,8 +407,9 @@ async function ozgar(maydonlar, xabar) {
   } catch (e) { chiz(); toast("Saqlanmadi: " + e.message); }
 }
 function chiqish(sabab) {
-  H.parol = ""; H.markazlar = []; H.tanlangan = ""; H.xato = sabab || "";
-  try { sessionStorage.removeItem("om-admin"); } catch (e) {}
+  if (H.sessiya && !sabab) { const s = H.sessiya; fetch(SERVER, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ amal: "admin_chiqish", sessiya: s }) }).catch(() => {}); }
+  H.parol = ""; H.sessiya = ""; H.markazlar = []; H.tanlangan = ""; H.xato = sabab || "";
+  try { sessionStorage.removeItem("om-admin-s"); sessionStorage.removeItem("om-admin"); } catch (e) {}
   chiz();
 }
 const AMAL = {
@@ -448,11 +442,6 @@ const AMAL = {
     el.disabled = true;
     try { const j = await sorov("admin_chat_yoz", { id: H.tanlangan, matn: p, turi: "parol" }); if (!j.ok) throw new Error(j.xato); H.chat.xabarlar = j.xabarlar; chatChiz(); const r = $("#chat-r"); r.scrollTop = r.scrollHeight; toast("Yangi parol yuborildi"); }
     catch (e) { toast("Yuborilmadi: " + e.message); } el.disabled = false;
-  },
-  tiklash: async el => {
-    el.disabled = true;
-    try { const j = await sorov("admin_tiklash", { id: H.tanlangan }); if (!j.ok) throw new Error(j.xato); H.tiklash = { id: H.tanlangan, kod: j.kod, muddat: j.muddat, login: j.login }; chiz(); toast("Tiklash kodi yaratildi"); }
-    catch (e) { el.disabled = false; toast("Yaratilmadi: " + e.message); }
   },
   naqd: () => { const m = H.markazlar.find(x => x.id === H.tanlangan); H.naqd = { tarif: (m && m.tarif) || (H.tariflar[0] || {}).k, oylar: 1 }; chiz(); },
   "naqd-tarif": el => { H.naqd.tarif = el.dataset.k; chiz(); },
@@ -497,26 +486,27 @@ document.addEventListener("submit", async e => {
   const p = $("#parol").value, b = e.target.querySelector("button"), x = $("#k-xato");
   if (!p) return;
   b.disabled = true; b.innerHTML = `<span class="aylana"></span> Tekshirilmoqda…`;
-  H.parol = p;
+  H.parol = p; H.sessiya = "";
   try {
     const j = await sorov("admin_kirish");
-    if (!j.ok) throw new Error(j.xato);
-    try { sessionStorage.setItem("om-admin", p); } catch (er) {}
+    if (!j.ok || !j.sessiya) throw new Error(j.xato || "Server eski versiyada: Code.gs ni yangilab, qayta Deploy qiling.");
+    H.sessiya = j.sessiya; H.parol = "";
+    try { sessionStorage.setItem("om-admin-s", j.sessiya); } catch (er) {}
     H.xato = ""; H.bugun = j.bugun; yukla(); bildYangila();
   } catch (er) {
-    H.parol = ""; b.disabled = false; b.textContent = "Kirish"; x.textContent = er.message; x.hidden = false;
+    H.parol = ""; H.sessiya = ""; b.disabled = false; b.textContent = "Kirish"; x.textContent = er.message; x.hidden = false;
   }
 });
 // Panel ochiq bo‘lmaganda ro‘yxat har 2 daqiqada yangilanadi
-setInterval(() => { if (H.parol && !H.tanlangan && document.visibilityState === "visible") yukla(true); }, 120000);
+setInterval(() => { if (H.sessiya && !H.tanlangan && document.visibilityState === "visible") yukla(true); }, 120000);
 // Qo‘ng‘iroqcha har 20 soniyada, ochiq chat har 6 soniyada yangilanadi
-setInterval(() => { if (H.parol && document.visibilityState === "visible") bildYangila(); }, 20000);
+setInterval(() => { if (H.sessiya && document.visibilityState === "visible") bildYangila(); }, 20000);
 setInterval(async () => {
-  if (!H.parol || !H.chat || !H.tanlangan || document.visibilityState !== "visible") return;
+  if (!H.sessiya || !H.chat || !H.tanlangan || document.visibilityState !== "visible") return;
   try { const id = H.chat.id, j = await sorov("admin_chat_ol", { id }); if (j.ok && H.chat && H.chat.id === id && JSON.stringify(j.xabarlar) !== JSON.stringify(H.chat.xabarlar)) { H.chat.xabarlar = j.xabarlar; chatChiz(); } } catch (e) {}
 }, 6000);
 chiz();
-if (H.parol) { yukla(); bildYangila(); }
+if (H.sessiya) { yukla(); bildYangila(); }
 </script>
 </body>
 </html>

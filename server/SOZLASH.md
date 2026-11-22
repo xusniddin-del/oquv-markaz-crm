@@ -36,6 +36,15 @@ Bir marta, taxminan 5 daqiqa. Kerak bo‘ladigan narsa: Google hisobi.
 
 Tariflar narxi va chegaralari `Code.gs` dagi `TARIFLAR` ro‘yxatida. O‘zgartirsangiz, yangi versiya qilib Deploy qiling — CRM narxlarni serverdan oladi.
 
+## 6. Bulutda saqlash (1.4.0 dan)
+Markaz ma’lumotlari Google Drive'ingizdagi **«O‘quv Markaz CRM — ma’lumotlar»** papkasida saqlanadi (har markazga bitta `M0001.json` fayl). Xodimlar logini **Loginlar** varag‘ida.
+1. Yangi `Code.gs` ni qo‘ying va saqlang.
+2. **sozlash** ni **Run** qiling — Google Drive uchun yangi ruxsat so‘raydi: **Allow**. Drive'da papka paydo bo‘ladi.
+3. **Deploy → Manage deployments → qalam → Version: New version → Deploy.**
+4. Shundan keyingina saytni (index.html) yangilang. Mijozlar dasturni keyingi ochishda ma’lumotlari avtomatik serverga yuklanadi.
+
+Papka va fayllarni o‘chirmang, nomini o‘zgartirmang. Papkani hech kimga ulashmang: unda markazlarning o‘quvchi va to‘lov ma’lumotlari bor.
+
 ## Keyinchalik
 - Jadvalda barcha markazlar ko‘rinadi. Qatorlarni qo‘lda o‘zgartirmang: admin sayt orqali boshqaring.
 - `token` ustuni markazning maxfiy kaliti. Uni hech kimga bermang.

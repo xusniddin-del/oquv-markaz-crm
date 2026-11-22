@@ -6,11 +6,12 @@ Kichik va o‘rta o‘quv markazlari uchun boshqaruv tizimi: o‘quvchilar, guru
 
 ## Qanday ishlaydi
 
-- Bitta HTML sahifa. Markazning ish ma’lumotlari foydalanuvchining brauzerida saqlanadi (localStorage).
+- Bitta HTML sahifa. Ma’lumotlar brauzerda (localStorage) va serverda — sotuvchining Google Drive'ida, har markazga bitta fayl. Istalgan kompyuter yoki telefondan login va parol bilan kiriladi.
+- Bir nechta qurilma bir vaqtda ishlaydi: o‘zgarishlar bir necha soniyada serverga ketadi, boshqa qurilmalar har daqiqada oladi. Internet uzilsa, o‘zgarishlar navbatda kutadi.
 - Markaz ro‘yxatdan o‘tadi va 14 kun bepul foydalanadi. Keyin sotuvchi obunani admin saytdan uzaytiradi.
 - Markazlar ro‘yxati sotuvchining Google jadvalida (Apps Script server). Dastur har ochilganda va har 10 daqiqada markaz holatini so‘raydi: bloklangan yoki muddati tugagan markaz ishlay olmaydi. Internet kerak.
-- O‘quvchi, to‘lov va boshqa ma’lumotlar serverga yuborilmaydi, markazning o‘z qurilmasida qoladi. Serverga faqat markaz kartasi va umumiy sonlar (o‘quvchi, guruh, xodim soni) boradi.
-- Boshqa qurilmaga o‘tish: Sozlamalar → Ma’lumotlar → Zaxira olish / Zaxiradan tiklash.
+- Boshqa qurilmaga o‘tish: shu sahifani ochib, login va parol bilan kirish kifoya. «Bu mening qurilmam emas» belgilansa, chiqishda ma’lumot o‘sha brauzerdan o‘chiriladi.
+- Zaxira (JSON) ham qoladi. Diqqat: zaxiradan tiklash markazning barcha qurilmalaridagi ma’lumotni almashtiradi.
 
 **Admin sayt (faqat sotuvchi uchun):** https://xusniddin-del.github.io/oquv-markaz-crm/admin/ — parol bilan kiriladi.
 
@@ -18,7 +19,7 @@ Kichik va o‘rta o‘quv markazlari uchun boshqaruv tizimi: o‘quvchilar, guru
 
 | Fayl | Vazifasi |
 |---|---|
-| `src/*.js`, `src/*.css` | Manba kod (bo‘limlar bo‘yicha) |
+| `src/*.js`, `src/*.css` | Manba kod (bo‘limlar bo‘yicha); `src/10-sinx.js` — bulutda saqlash va sinxronlash |
 | `build.py` | Manbani bitta faylga yig‘adi → `index.html` |
 | `index.html` | Saytning o‘zi (GitHub Pages shuni ko‘rsatadi) |
 | `admin/index.html` | Sotuvchining admin sayti: markazlar, bloklash, uzaytirish, xabar |

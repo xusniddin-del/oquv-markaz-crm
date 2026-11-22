@@ -49,6 +49,8 @@ const Server = {
     if (oldin !== this.holat + "|" + JSON.stringify(DB.litsenziya)) { if (this.holat === "ok") rejaRender(); else render(); }
   },
   boshla() {
+    // Brauzer joy tanqisligida ma’lumotni o‘zi o‘chirib yubormasligi uchun «doimiy xotira» so‘raladi
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
     if (location.hash === "#tolov") {
       try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
       if (DB.litsenziya.markazId && !DB.meta.demo) { toast("To‘lov tekshirilmoqda…"); tolovKut(12); }
@@ -66,7 +68,7 @@ const serverBugun = () => Server.bugun || bugun();
 
 // Server ruxsat bermaguncha ko‘rsatiladigan ekran (null — ruxsat bor)
 function serverEkran() {
-  if (DB.meta.demo || !markazBor()) return null;
+  if (!DB.meta.demo && !markazBor()) return null;
   const L = DB.litsenziya, h = litsenziyaHolati();
   const aloqa = `<p class="muted sm" style="text-align:center;margin:0">${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}</p>`;
   const zaxira = Ilova.holat === "ichida" && direktorMi() ? `<button type="button" class="btn btn-ghost btn-sm" data-act="zaxira">${icon("download", 16)} Zaxira olish</button>` : "";
@@ -75,6 +77,8 @@ function serverEkran() {
       <h1>${sarlavha}</h1><p>${esc(markazNomi())}</p></div>
     <section class="card forma">${matn}${tugmalar ? `<div class="amal-qator">${tugmalar}</div>` : ""}</section>${aloqa}</div>`;
   const qayta = `<button type="button" class="btn btn-primary" data-act="server-qayta">${icon("refresh", 18)} Qayta urinish</button>`;
+  if (DB.meta.demo) return demoTugadi() ? oyna("Demo muddati tugadi", `<p class="muted" style="margin:0">Demo ${DEMO_KUN} kun ko‘rish uchun. Haqiqiy ish uchun markazingizni ro‘yxatdan o‘tkazing: ${SOZLAMALAR.sinovKun} kun bepul.</p>`,
+    `<button type="button" class="btn btn-primary" data-act="demo-tugat">Ro‘yxatdan o‘tish</button>` + zaxira) : null;
 
   if (Server.holat === "kutilmoqda") return `<div class="kirish"><div class="kirish-bosh"><div class="logo katta">${esc(markazLogo())}</div><h1>${esc(markazNomi())}</h1>
     <p class="yuklanmoqda"><span class="aylana" aria-hidden="true"></span> Tekshirilmoqda…</p></div></div>`;
@@ -107,6 +111,9 @@ Object.assign(AMALLAR, {
       xatoKorsat("#ul-xato", /telefon/.test(e.message) ? "Telefon raqami kiritilmagan. Sozlamalarda markaz telefonini yozing yoki sotuvchiga murojaat qiling." : "Ulanib bo‘lmadi: " + (e.message || "internetni tekshiring"));
     }
   },
+  "demo-tugat": async () => {
+    if (!(await tasdiq("Demo ma’lumotlari o‘chiriladi. Demo’da o‘zingiz kiritgan narsalar kerak bo‘lsa, avval «Zaxira olish»ni bosing — ro‘yxatdan o‘tgach zaxiradan tiklaysiz.", { tugma: "Davom etish", sarlavha: "Ro‘yxatdan o‘tish" }))) return;
+    await Ombor.almashtir(boshDB()); Sessiya.tugat(); UI.kirish = { tab: "royxat", xato: 0, blok: 0, royxatOk: false }; Ilova.holatQoy("kirish"); },
   "obuna-yangila": async el => { el.disabled = true; await Server.tekshir(); render(); toast(Server.holat === "ok" ? "Holat yangilandi" : "Server bilan bog‘lanib bo‘lmadi", Server.holat === "ok" ? "ok" : "warn"); },
 });
 

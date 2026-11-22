@@ -4,19 +4,25 @@
  * «Markazlar» varag‘i: har bir ro‘yxatdan o‘tgan o‘quv markaz — bitta qator
  *   (nomi, rahbar, telefon, holati, muddati, tarifi).
  * «Tolovlar» varag‘i: markazlarning obuna to‘lovlari (TezCheck orqali yoki naqd).
- * O‘quvchilar va markazning boshqa ma’lumotlari bu yerga KELMAYDI —
- * ular markazning o‘z qurilmasida qoladi.
+ * «Loginlar» varag‘i: xodimlar logini va parol xeshi (istalgan qurilmadan kirish uchun).
+ * Markazning o‘quvchi, to‘lov va boshqa ma’lumotlari — Google Drive'dagi «O‘quv Markaz CRM — ma’lumotlar»
+ * papkasida, har markazga bitta JSON fayl. Qurilmalar o‘zgarishlarni yozuv darajasida birlashtiradi (sinx).
  *
  * Sozlash: SOZLASH.md faylidagi qadamlarni bajaring.
  */
 
 const VARAQ = "Markazlar";
 const USTUNLAR = ["id", "token", "nomi", "rahbar", "tel", "manzil", "hajm", "login", "royxat", "sinovTugash", "tugash",
-  "holat", "xabar", "izoh", "oxirgiKirish", "oquvchilar", "guruhlar", "xodimlar", "versiya", "tarif", "tiklash"];
+  "holat", "xabar", "izoh", "oxirgiKirish", "oquvchilar", "guruhlar", "xodimlar", "versiya", "tarif", "tiklash", "fayl"];
 const TOLOV_VARAQ = "Tolovlar";
 const TOLOV_USTUNLAR = ["billId", "markazId", "markaz", "tarif", "oylar", "summa", "holat", "yaratildi", "tolandi", "usul", "havola", "muhit", "izoh"];
 const XABAR_VARAQ = "Xabarlar";   // markaz ↔ sotuvchi chati (parolni unutish va boshqa savollar)
 const XABAR_USTUNLAR = ["id", "markazId", "markaz", "kimdan", "turi", "matn", "vaqt", "oqildi", "login"];
+const LOGIN_VARAQ = "Loginlar";
+const LOGIN_USTUNLAR = ["markazId", "login", "xesh", "faol", "xodimId", "ism", "rol"];
+// Sinxronlanadigan bo‘limlar (CRM dagi KOLLEKSIYALAR + davomat, bekor darslar, sozlamalar)
+const NOMLAR = ["xodimlar", "oqituvchilar", "xonalar", "guruhlar", "oquvchilar", "tolovlar", "lidlar", "xarajatlar",
+  "filiallar", "kurslar", "mavsumlar", "chegirmalar", "vazifalar", "sorovlar", "davomat", "bekorlar", "_obj"];
 const SINOV_KUN = 14;
 const VAQT_ZONA = "Asia/Tashkent";
 
@@ -44,7 +50,7 @@ function sozlash() {
     P.setProperty("ADMIN_PAROL", PAROL);
   }
   if (!P.getProperty("ADMIN_PAROL")) throw new Error("Admin parol hali qo‘yilmagan: PAROL qatoriga parol yozib, qayta Run qiling.");
-  varaq(); tolovVaraq(); xabarVaraq();
+  varaq(); tolovVaraq(); xabarVaraq(); loginVaraq(); papka();
   // Kutilayotgan to‘lovlarni har 10 daqiqada tekshiruvchi taymer
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "tolovlarniTekshir").forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger("tolovlarniTekshir").timeBased().everyMinutes(10).create();
@@ -66,6 +72,7 @@ function varaqOl(nom, ustunlar) {
 const varaq = () => varaqOl(VARAQ, USTUNLAR);
 const tolovVaraq = () => varaqOl(TOLOV_VARAQ, TOLOV_USTUNLAR);
 const xabarVaraq = () => varaqOl(XABAR_VARAQ, XABAR_USTUNLAR);
+const loginVaraq = () => varaqOl(LOGIN_VARAQ, LOGIN_USTUNLAR);
 function bugun() { return Utilities.formatDate(new Date(), VAQT_ZONA, "yyyy-MM-dd"); }
 function hozir() { return Utilities.formatDate(new Date(), VAQT_ZONA, "yyyy-MM-dd HH:mm"); }
 function sanaQosh(s, kun) {
@@ -90,8 +97,10 @@ function qatorlarOl(sh, ustunlar, kalit) {
     return o;
   }).filter(o => o[kalit]);
 }
+// Jadvalga formula bo‘lib tushmasin: = + - @ bilan boshlangan qiymat oldiga ' qo‘yiladi (Sheets uni ko‘rsatmaydi va qaytarmaydi)
+const xavfsiz = v => (/^[=+\-@]/.test(v) ? "'" + v : v);
 function yozOl(sh, ustunlar, o) {
-  const arr = ustunlar.map(k => (o[k] === undefined || o[k] === null ? "" : String(o[k])));
+  const arr = ustunlar.map(k => xavfsiz(o[k] === undefined || o[k] === null ? "" : String(o[k])));
   if (o._qator) sh.getRange(o._qator, 1, 1, ustunlar.length).setValues([arr]);
   else sh.appendRow(arr);
 }
@@ -118,11 +127,62 @@ function ochiq(o) {   // admin uchun: token va tiklash kodisiz
 }
 function holatJavob(o, kutilayotgan) {
   return { ok: true, id: o.id, nomi: o.nomi, holat: o.holat || "faol", sinovTugash: o.sinovTugash, tugash: o.tugash, xabar: o.xabar,
-    tarif: o.tarif || "", tariflar: TARIFLAR, oylar: OYLAR, tolovYoqilgan: !!prop("TEZCHECK_KALIT"), kutilayotgan: kutilayotgan || 0, bugun: bugun() };
+    royxat: o.royxat, tarif: o.tarif || "", tariflar: TARIFLAR, oylar: OYLAR, tolovYoqilgan: !!prop("TEZCHECK_KALIT"), kutilayotgan: kutilayotgan || 0, bugun: bugun() };
 }
 function javob(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
-/* ---------- 3. TezCheck ---------- */
+/* ---------- 3. Markaz ma’lumotlari (Google Drive) ---------- */
+function papka() {
+  const P = PropertiesService.getScriptProperties(), id = P.getProperty("MALUMOT_PAPKA");
+  if (id) { try { return DriveApp.getFolderById(id); } catch (e) {} }
+  const f = DriveApp.createFolder("O‘quv Markaz CRM — ma’lumotlar");
+  P.setProperty("MALUMOT_PAPKA", f.getId());
+  return f;
+}
+// Markaz faylini o‘qiydi (yo‘q bo‘lsa yaratadi): { file, f: { v: versiya, ns: { bo‘lim: { kalit: {v, t, s} } } } }
+function faylOl(sh, o) {
+  if (o.fayl) {
+    try { const file = DriveApp.getFileById(o.fayl); return { file, f: JSON.parse(file.getBlob().getDataAsString("UTF-8")) }; }
+    catch (e) { throw new Error("Markaz fayli ochilmadi (" + o.fayl + "): " + e.message + ". Sotuvchiga murojaat qiling."); }
+  }
+  const f = { v: 0, ns: {} }, file = papka().createFile(o.id + ".json", JSON.stringify(f), "application/json");
+  o.fayl = file.getId(); yoz(sh, o);
+  return { file, f };
+}
+const faylYoz = (file, f) => file.setContent(JSON.stringify(f));
+// Loginlar varag‘ida shu markaz xodimlarini yangilaydi
+function loginIndeks(markazId, f) {
+  const lsh = loginVaraq(), qolgan = qatorlarOl(lsh, LOGIN_USTUNLAR, "markazId").filter(r => r.markazId !== markazId);
+  const xd = f ? f.ns.xodimlar || {} : {};
+  Object.keys(xd).forEach(k => { const v = xd[k].v; if (v && v.login) qolgan.push({ markazId, login: String(v.login).toLowerCase(), xesh: v.pinXesh || "", faol: String(v.faol !== false), xodimId: v.id || k, ism: v.ism || "", rol: v.rol || "" }); });
+  const n = lsh.getLastRow() - 1;
+  if (n > 0) lsh.getRange(2, 1, n, LOGIN_USTUNLAR.length).clearContent();
+  if (qolgan.length) lsh.getRange(2, 1, qolgan.length, LOGIN_USTUNLAR.length).setValues(qolgan.map(r => LOGIN_USTUNLAR.map(k => xavfsiz(String(r[k] === undefined ? "" : r[k])))));
+}
+// CRM bilan bir xil parol xeshi: "sha:" + SHA-256("oquv-crm:" + parol)
+function parolXesh(p) {
+  const b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, "oquv-crm:" + p, Utilities.Charset.UTF_8);
+  return "sha:" + b.map(x => ((x + 256) % 256).toString(16).padStart(2, "0")).join("");
+}
+// Sotuvchi yuborgan yangi parolni serverdagi ma’lumotga ham yozadi: rahbar istalgan qurilmadan kira oladi
+function parolOrnat(sh, o, login, parol) {
+  const fl = faylOl(sh, o), xd = fl.f.ns.xodimlar || {}, kl = Object.keys(xd).filter(k => xd[k].v);
+  const k = kl.find(k => login && String(xd[k].v.login).toLowerCase() === login) || kl.find(k => xd[k].v.rol === "direktor" && xd[k].v.faol !== false) || kl.find(k => xd[k].v.rol === "direktor");
+  if (!k) return;
+  fl.f.v++;
+  xd[k] = { v: Object.assign({}, xd[k].v, { pinXesh: parolXesh(parol), faol: true }), t: Date.now(), s: fl.f.v };
+  faylYoz(fl.file, fl.f); loginIndeks(o.id, fl.f);
+  CacheService.getScriptCache().put("sv_" + o.id, String(fl.f.v), 21600);
+}
+// Tez yo‘l: yangi o‘zgarish yo‘q bo‘lsa — jadval, fayl va lock’siz javob (qurilmalar har daqiqada so‘raydi)
+function sinxTez(d) {
+  if (Array.isArray(d.ozg) && d.ozg.length) return null;
+  const kesh = CacheService.getScriptCache(), v = kesh.get("sv_" + d.id), tk = kesh.get("tk_" + d.id);
+  if (v === null || !tk || tk !== d.token || +v !== +d.s) return null;
+  return { ok: true, s: +v, ozg: [] };
+}
+
+/* ---------- 4. TezCheck ---------- */
 function tcSorov(yol, body, idem) {
   const kalit = prop("TEZCHECK_KALIT");
   if (!kalit) throw new Error("Online to‘lov hali ulanmagan. Sotuvchiga murojaat qiling.");
@@ -148,7 +208,10 @@ function chekTekshir(tsh, msh, t) {
   const b = d.bill || {}, p = d.payment || {};
   const tolangan = d.paid === true || b.paid === true || p.state === "succeeded";
   const muhit = d.environment || b.environment || p.environment || (d.livemode === false || b.livemode === false ? "test" : "live");
-  const summaOk = !p.amount_minor || +p.amount_minor >= +t.summa * 100;
+  const tolanganSumma = +(p.amount_minor || b.amount_minor || d.amount_minor || 0);
+  // Summa kelgan bo‘lsa — kam to‘langan chek qabul qilinmaydi. Umuman kelmasa — qabul qilinadi, lekin izohga yoziladi
+  const summaOk = !tolanganSumma || tolanganSumma >= +t.summa * 100;
+  if (!tolanganSumma) t.izoh = (t.izoh ? t.izoh + "; " : "") + "summa tekshirilmadi";
   if (tolangan && summaOk && (muhit === "live" || prop("TEST_TOLOV") === "ha")) {
     t.holat = "tolandi"; t.tolandi = hozir(); t.usul = p.provider_code || ""; t.muhit = muhit;
     tolovYoz(tsh, t);
@@ -161,12 +224,12 @@ function chekTekshir(tsh, msh, t) {
 }
 
 // Kutilayotgan cheklarni tekshiradi (3 kundan eskilari «eskirdi» bo‘ladi). Qolgan kutilayotganlar sonini qaytaradi
-function kutilayotganlar(markazId) {
+function kutilayotganlar(markazId, natija) {
   const tsh = tolovVaraq(), msh = varaq(), chegara = sanaQosh(bugun(), -3);
   let qoldi = 0;
   tolovlar(tsh).filter(t => t.holat === "kutilmoqda" && (!markazId || t.markazId === markazId)).forEach(t => {
     if (t.yaratildi.slice(0, 10) < chegara) { t.holat = "eskirdi"; tolovYoz(tsh, t); return; }
-    try { if (chekTekshir(tsh, msh, t) === "kutilmoqda") qoldi++; } catch (e) { qoldi++; }
+    try { const h = chekTekshir(tsh, msh, t); if (h === "kutilmoqda") qoldi++; else if (h === "tolandi" && natija) natija.tolandi = true; } catch (e) { qoldi++; }
   });
   return qoldi;
 }
@@ -178,12 +241,13 @@ function tolovlarniTekshir() {
   try { kutilayotganlar(); } finally { lock.releaseLock(); }
 }
 
-/* ---------- 4. Kirish nuqtalari ---------- */
+/* ---------- 5. Kirish nuqtalari ---------- */
 function doGet() { return javob({ ok: true, nom: "O‘quv Markaz CRM server", bugun: bugun() }); }
 
 function doPost(e) {
   let d;
   try { d = JSON.parse(e.postData.contents); } catch (x) { return javob({ ok: false, xato: "So‘rov noto‘g‘ri." }); }
+  if (d && d.amal === "sinx") { try { const t = sinxTez(d); if (t) return javob(t); } catch (x) {} }
   const lock = LockService.getScriptLock();
   try { lock.waitLock(25000); } catch (x) { return javob({ ok: false, xato: "Server band. Birozdan keyin urinib ko‘ring." }); }
   try { return javob(amal(d || {})); }
@@ -191,7 +255,7 @@ function doPost(e) {
   finally { lock.releaseLock(); }
 }
 
-/* ---------- 5. Amallar ---------- */
+/* ---------- 6. Amallar ---------- */
 function markazTop(sh, d) {
   const o = qatorlar(sh).find(x => x.id === d.id);
   return o && o.token === d.token ? o : null;
@@ -204,7 +268,12 @@ function amal(d) {
   if (d.amal === "royxat") {
     const nomi = String(d.nomi || "").trim().slice(0, 120), rahbar = String(d.rahbar || "").trim().slice(0, 120), tel = String(d.tel || "").trim().slice(0, 40);
     if (!nomi || !rahbar || tel9(tel).length < 9) return { ok: false, xato: "Markaz nomi, rahbar va telefon to‘liq bo‘lsin." };
+    // Spamdan himoya: bir soatda 30 tadan ortiq ro‘yxat va bir raqamdan kuniga bittadan ortiq ro‘yxat qabul qilinmaydi
+    const kesh = CacheService.getScriptCache(), soat = +(kesh.get("royxat_soat") || 0);
+    if (soat >= 30) return { ok: false, xato: "Hozir ro‘yxatdan o‘tish vaqtincha to‘xtatilgan. Bir soatdan keyin urinib ko‘ring yoki sotuvchiga murojaat qiling." };
     const l = qatorlar(sh);
+    if (l.some(o => tel9(o.tel) === tel9(tel) && o.royxat === bugun())) return { ok: false, xato: "Bu telefon raqami bugun ro‘yxatdan o‘tgan. Sotuvchiga murojaat qiling." };
+    kesh.put("royxat_soat", String(soat + 1), 3600);
     const avval = l.some(o => tel9(o.tel) === tel9(tel));   // shu raqam avval ro‘yxatdan o‘tgan bo‘lsa, qayta bepul sinov berilmaydi
     const id = "M" + String(l.reduce((m, o) => Math.max(m, +String(o.id).slice(1) || 0), 0) + 1).padStart(4, "0");
     const b = bugun();
@@ -218,15 +287,76 @@ function amal(d) {
 
   // Markaz dasturi har ochilganda holatini so‘raydi (kutilayotgan to‘lovlar ham shu yerda tekshiriladi)
   if (d.amal === "holat" || d.amal === "tolov_tekshir") {
-    if (!markazTop(sh, d)) return { ok: false, kod: "topilmadi", xato: "Markaz tizimda topilmadi." };
-    const kutilayotgan = kutilayotganlar(d.id);
-    const o = markazTop(sh, d);   // to‘lov muddatni o‘zgartirgan bo‘lishi mumkin — qayta o‘qiladi
+    let o = markazTop(sh, d);
+    if (!o) return { ok: false, kod: "topilmadi", xato: "Markaz tizimda topilmadi." };
+    const n = {}, kutilayotgan = kutilayotganlar(d.id, n);
+    if (n.tolandi) o = markazTop(sh, d);   // to‘lov muddatni o‘zgartirgan — qayta o‘qiladi
     o.oxirgiKirish = hozir();
     const s = d.stat || {};
     ["oquvchilar", "guruhlar", "xodimlar", "versiya"].forEach(k => { if (s[k] !== undefined) o[k] = String(s[k]); });
     if (d.nomi) o.nomi = String(d.nomi).trim().slice(0, 120);
     yoz(sh, o);
     return holatJavob(o, kutilayotgan);
+  }
+
+  // Qurilma o‘zgarishlarini yuboradi va boshqa qurilmalardagi o‘zgarishlarni oladi.
+  // Har yozuv: {n: bo‘lim, k: kalit, v: qiymat (null = o‘chirilgan), t: qurilmadagi vaqt}. Yangisi (t katta) yutadi
+  if (d.amal === "sinx") {
+    const o = markazTop(sh, d);
+    if (!o) return { ok: false, kod: "topilmadi", xato: "Markaz tizimda topilmadi." };
+    const kesh = CacheService.getScriptCache(); kesh.put("tk_" + o.id, o.token, 21600);
+    const fl = faylOl(sh, o), f = fl.f, yangiV = f.v + 1, qabul = {}, kelgan = Array.isArray(d.ozg) ? d.ozg : [];
+    let ozgardi = false, xodimOzg = false;
+    kelgan.forEach(it => {
+      if (!it || NOMLAR.indexOf(it.n) < 0 || it.k === undefined || it.k === null || it.k === "") return;
+      const n = it.n, k = String(it.k), t = +it.t || 0, ns = f.ns[n] = f.ns[n] || {}, cur = ns[k];
+      if (!cur || t > cur.t || (d.almashtir && t >= cur.t)) {
+        ns[k] = { v: it.v === undefined ? null : it.v, t, s: yangiV }; qabul[n + "|" + k] = 1; ozgardi = true; if (n === "xodimlar") xodimOzg = true;
+      }
+    });
+    // Zaxiradan tiklash: qurilmadagi baza to‘liq o‘rnini bosadi — unda yo‘q yozuvlar o‘chiriladi
+    if (d.almashtir) Object.keys(f.ns).forEach(n => Object.keys(f.ns[n]).forEach(k => {
+      if (!qabul[n + "|" + k] && f.ns[n][k].v !== null) { f.ns[n][k] = { v: null, t: Date.now(), s: yangiV }; ozgardi = true; if (n === "xodimlar") xodimOzg = true; }
+    }));
+    if (ozgardi) { f.v = yangiV; faylYoz(fl.file, f); if (xodimOzg) loginIndeks(o.id, f); }
+    kesh.put("sv_" + o.id, String(f.v), 21600);
+    const s0 = +d.s || 0, chiq = [];
+    Object.keys(f.ns).forEach(n => Object.keys(f.ns[n]).forEach(k => { const x = f.ns[n][k]; if (x.s > s0 && !qabul[n + "|" + k]) chiq.push({ n, k, v: x.v, t: x.t }); }));
+    return { ok: true, s: f.v, ozg: chiq };
+  }
+
+  // Istalgan qurilmadan kirish: login + parol xeshi. Markaz topilsa, uning butun ma’lumoti qaytadi
+  if (d.amal === "kirish") {
+    const login = String(d.login || "").trim().toLowerCase().slice(0, 40), xesh = String(d.xesh || "");
+    if (!login || !xesh) return { ok: false, xato: "Login va parolni kiriting." };
+    const kesh = CacheService.getScriptCache(), kk = "kx_" + login, n = +(kesh.get(kk) || 0);
+    if (n >= 10) return { ok: false, kod: "blok", xato: "Ko‘p marta noto‘g‘ri urinish. 15 daqiqadan keyin qayta urinib ko‘ring." };
+    const mos = qatorlarOl(loginVaraq(), LOGIN_USTUNLAR, "markazId").filter(r => r.login === login && r.xesh === xesh);
+    if (!mos.length) { kesh.put(kk, String(n + 1), 900); return { ok: false, kod: "parol", xato: "Login yoki parol noto‘g‘ri." }; }
+    const faol = mos.filter(r => r.faol !== "false");
+    if (!faol.length) return { ok: false, xato: "Bu xodimning kirishi o‘chirilgan. Rahbaringizga murojaat qiling." };
+    const idlar = faol.map(r => r.markazId).filter((x, i, a) => a.indexOf(x) === i);
+    if (idlar.length > 1) return { ok: false, xato: "Bu login bir nechta markazda bor. Sotuvchiga murojaat qiling." };
+    const o = qatorlar(sh).find(x => x.id === idlar[0]);
+    if (!o) return { ok: false, kod: "topilmadi", xato: "Markaz tizimda topilmadi." };
+    kesh.remove(kk);
+    const fl = faylOl(sh, o), ozg = [];
+    Object.keys(fl.f.ns).forEach(n => Object.keys(fl.f.ns[n]).forEach(k => { const x = fl.f.ns[n][k]; if (x.v !== null) ozg.push({ n, k, v: x.v, t: x.t }); }));
+    o.oxirgiKirish = hozir(); yoz(sh, o);
+    return Object.assign(holatJavob(o), { token: o.token, xodimId: faol[0].xodimId, s: fl.f.v, ozg });
+  }
+
+  // Boshqa qurilmadan «Parolni unutdim»: faqat rahbar logini bilan. Sotuvchi telefon qilib tekshiradi va yangi parol yuboradi
+  if (d.amal === "parol_sorov_login") {
+    const login = String(d.login || "").trim().toLowerCase().slice(0, 40);
+    if (!login) return { ok: false, xato: "Loginni kiriting." };
+    const kesh = CacheService.getScriptCache();
+    if (kesh.get("ps_" + login)) return { ok: true };   // 30 daqiqada bir marta
+    kesh.put("ps_" + login, "1", 1800);
+    const r = qatorlarOl(loginVaraq(), LOGIN_USTUNLAR, "markazId").find(r => r.login === login && r.rol === "direktor");
+    const o = r && qatorlar(sh).find(x => x.id === r.markazId);
+    if (o) xabarYoz(xabarVaraq(), { id: "x" + Date.now() + Math.floor(Math.random() * 1000), markazId: o.id, markaz: o.nomi, kimdan: "markaz", turi: "parol_sorov", matn: "Parolni unutdim (boshqa qurilmadan)", vaqt: Date.now(), oqildi: "", login });
+    return { ok: true };   // login bor-yo‘qligi oshkor qilinmaydi
   }
 
   // Markaz tarif tanlab to‘lov qilmoqchi: TezCheck'da chek yaratiladi, to‘lov sahifasi havolasi qaytadi
@@ -271,7 +401,10 @@ function amal(d) {
     if (!o) return { ok: false, kod: "topilmadi", xato: "Markaz tizimda topilmadi." };
     const xsh = xabarVaraq(), l = chatXabarlar(o.id, xsh), chiq = [];
     l.forEach(x => {
-      const yangiParol = x.kimdan === "admin" && x.turi === "parol" && !x.oqildi;
+      // Yangi parol faqat 24 soat ichida beriladi; eskirgani jadvalda ham yashiriladi
+      const eskirgan = x.kimdan === "admin" && x.turi === "parol" && !x.oqildi && Date.now() - +x.vaqt > 864e5;
+      if (eskirgan) { x.oqildi = hozir(); x.matn = YASHIRIN; xabarYoz(xsh, x); }
+      const yangiParol = !eskirgan && x.kimdan === "admin" && x.turi === "parol" && !x.oqildi;
       chiq.push(xabarOchiq(x, yangiParol));
       if (x.kimdan === "admin" && !x.oqildi) { x.oqildi = hozir(); if (yangiParol) x.matn = YASHIRIN; xabarYoz(xsh, x); }
     });
@@ -280,13 +413,23 @@ function amal(d) {
 
   // ----- Admin amallari: parol talab qilinadi -----
   if (String(d.amal || "").indexOf("admin_") === 0) {
-    const kesh = CacheService.getScriptCache(), xatolar = +(kesh.get("admin_xato") || 0);
-    if (xatolar >= 10) return { ok: false, kod: "blok", xato: "Ko‘p marta noto‘g‘ri parol. 10 daqiqadan keyin urinib ko‘ring." };
+    const kesh = CacheService.getScriptCache();
     const parol = prop("ADMIN_PAROL");
     if (!parol) return { ok: false, xato: "Server sozlanmagan: sozlash() funksiyasini ishga tushiring." };
-    if (d.parol !== parol) { kesh.put("admin_xato", String(xatolar + 1), 600); return { ok: false, kod: "parol", xato: "Parol noto‘g‘ri." }; }
-
-    if (d.amal === "admin_kirish") return { ok: true, bugun: bugun() };
+    // Kirgan admin sessiya kaliti bilan ishlaydi: begona odam parol terib blok qo‘zg‘atsa ham, ochiq panel uzilmaydi
+    const sessiyaOk = d.sessiya && String(d.sessiya).length > 30 && kesh.get("admin_s_" + d.sessiya) === "1";
+    if (!sessiyaOk) {
+      if (d.amal !== "admin_kirish") return { ok: false, kod: "parol", xato: "Sessiya tugadi. Qayta kiring." };
+      const xatolar = +(kesh.get("admin_xato") || 0);
+      if (xatolar >= 10) return { ok: false, kod: "blok", xato: "Ko‘p marta noto‘g‘ri parol. 10 daqiqadan keyin urinib ko‘ring." };
+      if (d.parol !== parol) { kesh.put("admin_xato", String(xatolar + 1), 600); return { ok: false, kod: "parol", xato: "Parol noto‘g‘ri." }; }
+      const s = Utilities.getUuid() + Utilities.getUuid();
+      kesh.put("admin_s_" + s, "1", 21600);   // 6 soat
+      return { ok: true, bugun: bugun(), sessiya: s };
+    }
+    kesh.put("admin_s_" + d.sessiya, "1", 21600);   // faol ishlayotgan admin uchun muddat uzayadi
+    if (d.amal === "admin_kirish") return { ok: true, bugun: bugun(), sessiya: d.sessiya };
+    if (d.amal === "admin_chiqish") { kesh.remove("admin_s_" + d.sessiya); return { ok: true }; }
     // Qo‘ng‘iroqcha: markazlardan kelgan o‘qilmagan xabarlar va suhbatlar ro‘yxati
     if (d.amal === "admin_bildirish") {
       const guruh = {};
@@ -338,10 +481,19 @@ function amal(d) {
       if (turi === "parol" && (matnT.length < 8 || matnT.length > 64)) return { ok: false, xato: "Parol 8–64 belgi bo‘lsin." };
       if (!matnT) return { ok: false, xato: "Xabar bo‘sh." };
       const xsh = xabarVaraq();
+      if (turi === "parol") {   // serverdagi ma’lumotga ham yoziladi: rahbar istalgan qurilmadan yangi parol bilan kiradi
+        const soLogin = (chatXabarlar(o.id, xsh).filter(x => x.kimdan === "markaz" && x.login).pop() || {}).login || "";
+        parolOrnat(sh, o, String(soLogin).toLowerCase(), matnT);
+      }
       xabarYoz(xsh, { id: "x" + Date.now() + Math.floor(Math.random() * 1000), markazId: o.id, markaz: o.nomi, kimdan: "admin", turi, matn: matnT, vaqt: Date.now(), oqildi: "", login: "" });
       return { ok: true, xabarlar: chatXabarlar(o.id, xsh).map(x => xabarOchiq(x, x.kimdan === "admin" && x.turi === "parol" && !x.oqildi)) };
     }
-    if (d.amal === "admin_ochir") { sh.deleteRow(o._qator); return { ok: true }; }
+    if (d.amal === "admin_ochir") {
+      if (o.fayl) { try { DriveApp.getFileById(o.fayl).setTrashed(true); } catch (e) {} }   // Drive savatchasida 30 kun turadi
+      loginIndeks(o.id, null);
+      const kesh = CacheService.getScriptCache(); kesh.remove("tk_" + o.id); kesh.remove("sv_" + o.id);
+      sh.deleteRow(o._qator); return { ok: true };
+    }
   }
   return { ok: false, xato: "Noma’lum amal." };
 }

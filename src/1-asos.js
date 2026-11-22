@@ -7,7 +7,7 @@
    ===================================================================== */
 const SOZLAMALAR = {
   dasturNomi: "O‘quv Markaz CRM",
-  versiya: "1.3.1",              // har yangi versiyada oshiriladi (CHANGELOG.md)
+  versiya: "1.4.0",              // har yangi versiyada oshiriladi (CHANGELOG.md)
   markazNomi: "Bilim o‘quv markazi",     // dastur ichida «Sozlamalar»dan ham o‘zgartiriladi
   markazTel: "+998 90 000 00 00",
   logoMatni: "OM",
@@ -226,6 +226,9 @@ function tartibla(x) {
     db.tolovlar = db.tolovlar.map(t => ({ guruhId: "", xodimId: "", ...t, izoh: [t.oy ? oyNomi(t.oy) + " uchun" : "", t.izoh || ""].filter(Boolean).join(". ") }));
   }
   db.oquvchilar.forEach(o => { if (!Array.isArray(o.azolik)) o.azolik = []; });
+  // Serverda ro‘yxatdan o‘tgan markaz demo bo‘la olmaydi (zaxira faylida demo:true yozib aylanib o‘tishning oldini oladi)
+  if (db.litsenziya.markazId) db.meta.demo = false;
+  if (db.meta.demo && !db.meta.demoSana) db.meta.demoSana = db.meta.oxirgiZaxira || bugun();
   // Eski versiyadan: loginsiz xodimlarga login, kodsiz markazga kod va 14 kunlik sinov
   db.xodimlar.forEach(x => { if (!x.login) x.login = loginYasa(x.ism, x.id, db); });
   if (db.xodimlar.length && !db.litsenziya.royxat) {
@@ -240,7 +243,10 @@ let DB = boshDB();
 const markazLogo = () => { const n = (DB.sozlamalar.markazNomi || "").replace(/o‘quv|markazi?|o'quv/gi, " ").trim().split(/\s+/).filter(Boolean);
   return n.length ? n.slice(0, 2).map(w => w[0]).join("").toUpperCase() : SOZLAMALAR.logoMatni; };
 // Bu qurilmada haqiqiy (demo emas) ro‘yxatdan o‘tgan markaz bormi
-const markazBor = () => DB.xodimlar.length > 0 && !DB.meta.demo && !DB.xodimlar.some(x => x.login === "bilim.akmal");
+// Demo — faqat «Demo yuklash» tugmasi qo‘ygan belgi bo‘yicha (login nomiga qarab emas). Tizimga ulangan markaz hech qachon demo emas
+const markazBor = () => DB.xodimlar.length > 0 && !DB.meta.demo;
+const DEMO_KUN = 3;   // demo shuncha kundan keyin yopiladi: haqiqiy ish uchun ro‘yxatdan o‘tish kerak
+const demoTugadi = () => DB.meta.demo && kunFarqi(DB.meta.demoSana || bugun(), bugun()) > DEMO_KUN;
 let DBver = 0;                 // har o‘zgarishda oshadi (hisob-kitob keshi uchun)
 const ozgardi = () => { DBver++; };
 
@@ -256,7 +262,18 @@ const Ombor = {
     try { DB = tartibla(JSON.parse(Mahalliy.ol(SOZLAMALAR.omborKaliti))); } catch (e) { DB = boshDB(); }
     ozgardi();
   },
-  saqla() { Mahalliy.qoy(SOZLAMALAR.omborKaliti, JSON.stringify(DB)); },
+  xato: false,   // brauzer xotirasi to‘lgan — oxirgi o‘zgarishlar saqlanmagan
+  saqla() {
+    const k = SOZLAMALAR.omborKaliti, v = JSON.stringify(DB);
+    let ok = Mahalliy.qoy(k, v);
+    // Joy yetmasa: eski markaz arxivini (qayta ro‘yxatdan o‘tishda qolgan nusxa) o‘chirib, yana urinadi
+    if (!ok && Mahalliy.ol(k + "-arxiv") !== null) { Mahalliy.ochir(k + "-arxiv"); ok = Mahalliy.qoy(k, v); }
+    const oldin = this.xato; this.xato = !ok;
+    if (!ok && !oldin && typeof toast === "function") toast("Xotira to‘ldi! Oxirgi o‘zgarish saqlanmadi. Darhol zaxira oling.", "warn");
+    return ok;
+  },
+  // Band joy (taxminan, MB) — Sozlamalarda ko‘rsatiladi
+  hajmMB() { let n = 0; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || "").length; } } catch (e) {} return n * 2 / 1048576; },
   // Hujjat qo‘shish yoki yangilash (id bo‘yicha)
   yoz(kol, obj) {
     if (!obj.id) obj.id = yangiId();

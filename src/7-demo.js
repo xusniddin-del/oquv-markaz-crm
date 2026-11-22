@@ -145,7 +145,7 @@ async function demoDB() {
     { id: "s2", oquvchiId: "o16", ism: "Rustamov aka", tel: "+998 93 707 80 90", turi: "Shikoyat", matn: "Xonada sovuq, isitish ishlamayapti.", holat: "jarayonda", javob: "", xodimId: "x2", filialId: "f1", yaratildi: Date.now() - 864e5 },
     { id: "s3", oquvchiId: "", ism: "Sevara", tel: "+998 97 111 00 22", turi: "Taklif", matn: "Shanba kuni kechki guruh ochsangiz yaxshi bo‘lardi.", holat: "hal", javob: "Rahmat! Dekabrdan shanba 17:00 guruhi ochiladi.", xodimId: "x1", filialId: "", yaratildi: Date.now() - 6 * 864e5 },
   ];
-  db.meta = { oxirgiZaxira: b, demo: true };
+  db.meta = { oxirgiZaxira: b, demo: true, demoSana: bugun() };
   return db;
 }
 
@@ -163,6 +163,7 @@ async function demoDB() {
   Ombor.yukla();
   Ilova.maLumotTayyor();
   Server.boshla();
+  Sinx.boshla();
   // Sotuvchi taqdimoti uchun: fayl manzili oxiriga #demo qo‘shib ochilsa, namunaviy markaz yuklanadi
   if (location.hash === "#demo") { try { history.replaceState(null, "", "#bosh"); } catch (e) {} AMALLAR.demo(); }
 })();

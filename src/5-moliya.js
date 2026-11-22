@@ -172,10 +172,11 @@ function renderSozlamalar() {
 
   // Ma’lumotlar
   const z = DB.meta.oxirgiZaxira;
-  return h + `<div class="kartalar yuqori">
+  return h + `<div class="kartalar yuqori">${sinxHolatHTML()}
     <section class="card forma"><div class="card-h" style="margin:0"><h2>Zaxira nusxa</h2></div>
       <p class="muted" style="margin:0">Butun bazani bitta faylga saqlaydi. Haftada bir marta oling va Telegram «Saqlangan xabarlar»ga tashlab qo‘ying.</p>
       <div class="muted sm">Oxirgi zaxira: <b>${z ? sanaMatn(z) : "hali olinmagan"}</b></div>
+      <div class="muted sm">Brauzer xotirasi: <b>${Ombor.hajmMB().toFixed(1).replace(".", ",")} MB</b> / ~5 MB band${Ombor.hajmMB() > 3.5 ? ` — <b style="color:var(--danger,#dc2626)">joy kam qoldi, zaxira oling</b>` : ""}</div>
       <button class="btn btn-primary" data-act="zaxira">${icon("download", 20)} Zaxira olish (JSON)</button></section>
     <section class="card forma"><div class="card-h" style="margin:0"><h2>Zaxiradan tiklash</h2></div>
       <p class="muted" style="margin:0">Joriy ma’lumotlar zaxiradagisi bilan almashtiriladi. Boshqa kompyuter yoki telefonga ko‘chirish ham shu yo‘l bilan. Eski versiya (v1) zaxiralari ham qabul qilinadi.</p>
@@ -242,11 +243,11 @@ async function tikla(matn) {
   let x;
   try { x = JSON.parse(matn); } catch (e) { toast("Fayl o‘qilmadi: bu zaxira fayli emas", "warn"); return; }
   if (!x || !Array.isArray(x.oquvchilar) || !Array.isArray(x.guruhlar)) { toast("Bu faylda zaxira ma’lumotlari topilmadi", "warn"); return; }
-  const ha = await tasdiq(`Zaxirada ${x.guruhlar.length} ta ${T.guruh}, ${x.oquvchilar.length} ta ${T.oquvchi} bor. Joriy ma’lumotlar almashtiriladi.`, { tugma: "Tiklash", sarlavha: "Zaxiradan tiklash", xavfli: true });
+  const ha = await tasdiq(`Zaxirada ${x.guruhlar.length} ta ${T.guruh}, ${x.oquvchilar.length} ta ${T.oquvchi} bor. Joriy ma’lumotlar almashtiriladi${Sinx.faol() ? " — markazning <b>barcha qurilmalarida</b> va serverda ham" : ""}.`, { tugma: "Tiklash", sarlavha: "Zaxiradan tiklash", xavfli: true });
   if (!ha) return;
   try {
     toast("Tiklanmoqda…");
-    await Ombor.almashtir(x);
+    await Ombor.almashtir({ ...x, meta: { ...(x.meta || {}), demo: false } });   // fayldan tiklangan baza hech qachon demo emas
     if (!DB.xodimlar.length) { Sessiya.tugat(); Ilova.holat = "kirish"; UI.kirish.tab = "royxat"; }
     else if (!men()) { Sessiya.tugat(); Ilova.holat = "kirish"; UI.kirish.tab = "kirish"; }
     UI.dav = null; UI.tf.oid = ""; Server.holat = "kutilmoqda"; render(); toast("Ma’lumotlar tiklandi");
