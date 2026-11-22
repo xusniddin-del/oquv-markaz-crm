@@ -168,11 +168,12 @@ function parolXesh(p) {
 function parolOrnat(sh, o, login, parol) {
   const fl = faylOl(sh, o), xd = fl.f.ns.xodimlar || {}, kl = Object.keys(xd).filter(k => xd[k].v);
   const k = kl.find(k => login && String(xd[k].v.login).toLowerCase() === login) || kl.find(k => xd[k].v.rol === "direktor" && xd[k].v.faol !== false) || kl.find(k => xd[k].v.rol === "direktor");
-  if (!k) return;
+  if (!k) return false;
   fl.f.v++;
   xd[k] = { v: Object.assign({}, xd[k].v, { pinXesh: parolXesh(parol), faol: true }), t: Date.now(), s: fl.f.v };
   faylYoz(fl.file, fl.f); loginIndeks(o.id, fl.f);
   CacheService.getScriptCache().put("sv_" + o.id, String(fl.f.v), 21600);
+  return true;
 }
 // Tez yo‘l: yangi o‘zgarish yo‘q bo‘lsa — jadval, fayl va lock’siz javob (qurilmalar har daqiqada so‘raydi)
 function sinxTez(d) {
@@ -331,8 +332,15 @@ function amal(d) {
     if (!login || !xesh) return { ok: false, xato: "Login va parolni kiriting." };
     const kesh = CacheService.getScriptCache(), kk = "kx_" + login, n = +(kesh.get(kk) || 0);
     if (n >= 10) return { ok: false, kod: "blok", xato: "Ko‘p marta noto‘g‘ri urinish. 15 daqiqadan keyin qayta urinib ko‘ring." };
-    const mos = qatorlarOl(loginVaraq(), LOGIN_USTUNLAR, "markazId").filter(r => r.login === login && r.xesh === xesh);
-    if (!mos.length) { kesh.put(kk, String(n + 1), 900); return { ok: false, kod: "parol", xato: "Login yoki parol noto‘g‘ri." }; }
+    const loginlar = qatorlarOl(loginVaraq(), LOGIN_USTUNLAR, "markazId"), mos = loginlar.filter(r => r.login === login && r.xesh === xesh);
+    if (!mos.length) {
+      kesh.put(kk, String(n + 1), 900);
+      // Markaz eski versiyada ro‘yxatdan o‘tgan va ma’lumoti hali serverga yuklanmagan — tushunarli xabar
+      const m = qatorlar(sh).find(x => String(x.login).toLowerCase() === login);
+      if (m && !loginlar.some(r => r.markazId === m.id))
+        return { ok: false, kod: "yuklanmagan", xato: "Bu markaz ma’lumotlari hali serverga yuklanmagan. Markaz ro‘yxatdan o‘tgan kompyuter yoki telefonda saytni bir marta oching (internet bilan) — shundan keyin istalgan qurilmadan kira olasiz." };
+      return { ok: false, kod: "parol", xato: "Login yoki parol noto‘g‘ri." };
+    }
     const faol = mos.filter(r => r.faol !== "false");
     if (!faol.length) return { ok: false, xato: "Bu xodimning kirishi o‘chirilgan. Rahbaringizga murojaat qiling." };
     const idlar = faol.map(r => r.markazId).filter((x, i, a) => a.indexOf(x) === i);
@@ -481,12 +489,13 @@ function amal(d) {
       if (turi === "parol" && (matnT.length < 8 || matnT.length > 64)) return { ok: false, xato: "Parol 8–64 belgi bo‘lsin." };
       if (!matnT) return { ok: false, xato: "Xabar bo‘sh." };
       const xsh = xabarVaraq();
+      let serverda = true;
       if (turi === "parol") {   // serverdagi ma’lumotga ham yoziladi: rahbar istalgan qurilmadan yangi parol bilan kiradi
         const soLogin = (chatXabarlar(o.id, xsh).filter(x => x.kimdan === "markaz" && x.login).pop() || {}).login || "";
-        parolOrnat(sh, o, String(soLogin).toLowerCase(), matnT);
+        serverda = parolOrnat(sh, o, String(soLogin).toLowerCase(), matnT);
       }
       xabarYoz(xsh, { id: "x" + Date.now() + Math.floor(Math.random() * 1000), markazId: o.id, markaz: o.nomi, kimdan: "admin", turi, matn: matnT, vaqt: Date.now(), oqildi: "", login: "" });
-      return { ok: true, xabarlar: chatXabarlar(o.id, xsh).map(x => xabarOchiq(x, x.kimdan === "admin" && x.turi === "parol" && !x.oqildi)) };
+      return { ok: true, serverda, xabarlar: chatXabarlar(o.id, xsh).map(x => xabarOchiq(x, x.kimdan === "admin" && x.turi === "parol" && !x.oqildi)) };
     }
     if (d.amal === "admin_ochir") {
       if (o.fayl) { try { DriveApp.getFileById(o.fayl).setTrashed(true); } catch (e) {} }   // Drive savatchasida 30 kun turadi

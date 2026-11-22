@@ -440,7 +440,9 @@ const AMAL = {
     const p = $("#c-parol").value.trim();
     if (p.length < 8) return toast("Parol kamida 8 belgi bo‘lsin");
     el.disabled = true;
-    try { const j = await sorov("admin_chat_yoz", { id: H.tanlangan, matn: p, turi: "parol" }); if (!j.ok) throw new Error(j.xato); H.chat.xabarlar = j.xabarlar; chatChiz(); const r = $("#chat-r"); r.scrollTop = r.scrollHeight; toast("Yangi parol yuborildi"); }
+    try { const j = await sorov("admin_chat_yoz", { id: H.tanlangan, matn: p, turi: "parol" }); if (!j.ok) throw new Error(j.xato); H.chat.xabarlar = j.xabarlar; chatChiz(); const r = $("#chat-r"); r.scrollTop = r.scrollHeight;
+      if (j.serverda === false) { toast("Yuborildi, lekin bu markaz ma’lumoti hali serverda yo‘q: parol faqat markaz qurilmasida chat ochilganda ishlaydi. Rahbarga ayting: avval o‘sha qurilmada saytni ochsin."); clearTimeout(toast.t); toast.t = setTimeout(() => { $("#toast").hidden = true; }, 9000); }
+      else toast("Yangi parol yuborildi — rahbar istalgan qurilmadan kira oladi"); }
     catch (e) { toast("Yuborilmadi: " + e.message); } el.disabled = false;
   },
   naqd: () => { const m = H.markazlar.find(x => x.id === H.tanlangan); H.naqd = { tarif: (m && m.tarif) || (H.tariflar[0] || {}).k, oylar: 1 }; chiz(); },

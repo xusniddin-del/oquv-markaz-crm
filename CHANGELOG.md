@@ -1,5 +1,11 @@
 # Versiyalar tarixi
 
+## 1.4.1 — 2026-11-22
+
+- Eski versiyada ro‘yxatdan o‘tgan va ma’lumoti hali serverga yuklanmagan markazga boshqa qurilmadan kirilsa, «Login yoki parol noto‘g‘ri» o‘rniga nima qilish kerakligi yoziladi.
+- Admin: bunday markazga yangi parol yuborilganda ogohlantirish chiqadi.
+- Kirish oynasidagi «Bu mening qurilmam emas» belgisi oddiy o‘lchamda.
+
 ## 1.4.0 — 2026-11-22
 
 Istalgan qurilmadan kirish.

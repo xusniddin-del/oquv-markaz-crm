@@ -189,7 +189,7 @@ function renderKirish() {
           : bor ? `<div class="info-quti"><b>${esc(markazNomi())}</b></div>` : ""}
         <label class="maydon"><span>Login</span><input id="k-login" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Loginingiz" value="${esc(k.tiklashOk || "")}" autofocus></label>
         ${parolMaydon("k-parol", "Parol", { erkin: true })}
-        ${bor ? "" : `<label class="sm muted" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="k-begona"> Bu mening qurilmam emas — chiqqanda ma’lumotlar bu yerdan o‘chirilsin</label>`}
+        ${bor ? "" : `<label class="sm muted" style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;line-height:1.4"><input type="checkbox" id="k-begona" style="width:18px;height:18px;min-height:0;flex:none;margin:1px 0 0;padding:0;accent-color:var(--primary)"> Bu mening qurilmam emas — chiqqanda ma’lumotlar bu yerdan o‘chirilsin</label>`}
         <p class="xato" id="k-xato" ${kutish ? "" : "hidden"}>${kutish ? `Ko‘p marta xato kiritildi. ${kutish} soniyadan keyin urinib ko‘ring.` : ""}</p>
         <button type="submit" class="btn btn-primary btn-blok" ${kutish ? "disabled" : ""}>Kirish</button>
         <p class="muted sm" style="margin:0">Xodimlar login va parolni markaz rahbaridan oladi.</p>

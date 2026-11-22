@@ -102,7 +102,7 @@ const Sinx = {
     if (!SOZLAMALAR.server || !navigator.onLine) return false;
     let j;
     try { j = await Server.sorov("kirish", { login: login.trim().toLowerCase(), xesh: await pinXesh(parol) }); } catch (e) { return false; }
-    if (!j.ok) { if (j.kod === "blok" || /o‘chirilgan|bir nechta/.test(j.xato || "")) { xatoKorsat("#k-xato", j.xato); return "xato"; } return false; }
+    if (!j.ok) { if (j.kod === "blok" || j.kod === "yuklanmagan" || /o‘chirilgan|bir nechta/.test(j.xato || "")) { xatoKorsat("#k-xato", j.xato); return "xato"; } return false; }
     const shuMarkaz = DB.litsenziya.markazId === j.id;
     if (markazBor() && !shuMarkaz && !DB.meta.demo) {
       // Qurilmada boshqa markaz bor: u serverga to‘liq yuklangan bo‘lsagina almashtiriladi
