@@ -768,7 +768,7 @@ pre.kod-blok { background: var(--surface-2); border: 1px solid var(--line); bord
    ===================================================================== */
 const SOZLAMALAR = {
   dasturNomi: "O‘quv Markaz CRM",
-  versiya: "1.3.1",              // har yangi versiyada oshiriladi (CHANGELOG.md)
+  versiya: "1.4.0",              // har yangi versiyada oshiriladi (CHANGELOG.md)
   markazNomi: "Bilim o‘quv markazi",     // dastur ichida «Sozlamalar»dan ham o‘zgartiriladi
   markazTel: "+998 90 000 00 00",
   logoMatni: "OM",
@@ -987,6 +987,9 @@ function tartibla(x) {
     db.tolovlar = db.tolovlar.map(t => ({ guruhId: "", xodimId: "", ...t, izoh: [t.oy ? oyNomi(t.oy) + " uchun" : "", t.izoh || ""].filter(Boolean).join(". ") }));
   }
   db.oquvchilar.forEach(o => { if (!Array.isArray(o.azolik)) o.azolik = []; });
+  // Serverda ro‘yxatdan o‘tgan markaz demo bo‘la olmaydi (zaxira faylida demo:true yozib aylanib o‘tishning oldini oladi)
+  if (db.litsenziya.markazId) db.meta.demo = false;
+  if (db.meta.demo && !db.meta.demoSana) db.meta.demoSana = db.meta.oxirgiZaxira || bugun();
   // Eski versiyadan: loginsiz xodimlarga login, kodsiz markazga kod va 14 kunlik sinov
   db.xodimlar.forEach(x => { if (!x.login) x.login = loginYasa(x.ism, x.id, db); });
   if (db.xodimlar.length && !db.litsenziya.royxat) {
@@ -1001,7 +1004,10 @@ let DB = boshDB();
 const markazLogo = () => { const n = (DB.sozlamalar.markazNomi || "").replace(/o‘quv|markazi?|o'quv/gi, " ").trim().split(/\s+/).filter(Boolean);
   return n.length ? n.slice(0, 2).map(w => w[0]).join("").toUpperCase() : SOZLAMALAR.logoMatni; };
 // Bu qurilmada haqiqiy (demo emas) ro‘yxatdan o‘tgan markaz bormi
-const markazBor = () => DB.xodimlar.length > 0 && !DB.meta.demo && !DB.xodimlar.some(x => x.login === "bilim.akmal");
+// Demo — faqat «Demo yuklash» tugmasi qo‘ygan belgi bo‘yicha (login nomiga qarab emas). Tizimga ulangan markaz hech qachon demo emas
+const markazBor = () => DB.xodimlar.length > 0 && !DB.meta.demo;
+const DEMO_KUN = 3;   // demo shuncha kundan keyin yopiladi: haqiqiy ish uchun ro‘yxatdan o‘tish kerak
+const demoTugadi = () => DB.meta.demo && kunFarqi(DB.meta.demoSana || bugun(), bugun()) > DEMO_KUN;
 let DBver = 0;                 // har o‘zgarishda oshadi (hisob-kitob keshi uchun)
 const ozgardi = () => { DBver++; };
 
@@ -1017,7 +1023,18 @@ const Ombor = {
     try { DB = tartibla(JSON.parse(Mahalliy.ol(SOZLAMALAR.omborKaliti))); } catch (e) { DB = boshDB(); }
     ozgardi();
   },
-  saqla() { Mahalliy.qoy(SOZLAMALAR.omborKaliti, JSON.stringify(DB)); },
+  xato: false,   // brauzer xotirasi to‘lgan — oxirgi o‘zgarishlar saqlanmagan
+  saqla() {
+    const k = SOZLAMALAR.omborKaliti, v = JSON.stringify(DB);
+    let ok = Mahalliy.qoy(k, v);
+    // Joy yetmasa: eski markaz arxivini (qayta ro‘yxatdan o‘tishda qolgan nusxa) o‘chirib, yana urinadi
+    if (!ok && Mahalliy.ol(k + "-arxiv") !== null) { Mahalliy.ochir(k + "-arxiv"); ok = Mahalliy.qoy(k, v); }
+    const oldin = this.xato; this.xato = !ok;
+    if (!ok && !oldin && typeof toast === "function") toast("Xotira to‘ldi! Oxirgi o‘zgarish saqlanmadi. Darhol zaxira oling.", "warn");
+    return ok;
+  },
+  // Band joy (taxminan, MB) — Sozlamalarda ko‘rsatiladi
+  hajmMB() { let n = 0; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || "").length; } } catch (e) {} return n * 2 / 1048576; },
   // Hujjat qo‘shish yoki yangilash (id bo‘yicha)
   yoz(kol, obj) {
     if (!obj.id) obj.id = yangiId();
@@ -1472,7 +1489,7 @@ const Ilova = {
   maLumotTayyor() {
     const m = men();
     this.holat = Sessiya.xodimId && m && m.faol !== false ? "ichida" : "kirish";
-    if (this.holat === "kirish" && !markazBor()) UI.kirish.tab = "royxat";
+    // Yangi qurilmada ham avval «Kirish»: markaz boshqa joyda ro‘yxatdan o‘tgan bo‘lsa, login bilan kiradi (ro‘yxat tugmasi shu oynada)
     rejaRender();
   },
 };
@@ -1567,6 +1584,8 @@ function renderBanner() {
     <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Tarif tanlash</button></div>`;
   else if (direktorMi() && !DB.meta.demo && L.tur === "faol" && L.qoldi <= 7) h += `<div class="banner" role="status">${icon("alert")}<div class="b-mat"><b>Obuna ${L.qoldi === 0 ? "bugun" : `${L.qoldi} kundan keyin`} tugaydi</b> (${sanaMatn(L.tugash)}). ${aloqa}</div>
     <button class="btn btn-sm btn-soft" data-act="litsenziya-och">Uzaytirish</button></div>`;
+  if (Ombor.xato) h += `<div class="banner xavf" role="alert">${icon("alert")}<div class="b-mat"><b>Brauzer xotirasi to‘ldi — oxirgi o‘zgarishlar saqlanmayapti.</b> Sahifani yopmang: darhol zaxira oling va sotuvchiga murojaat qiling.</div>
+    <button class="btn btn-sm btn-primary" data-act="zaxira">${icon("download", 18)} Zaxira olish</button></div>`;
   if (!Mahalliy.ishlaydi) h += `<div class="banner xavf" role="alert">${icon("alert")}<div class="b-mat"><b>Brauzer xotirasi ishlamayapti.</b> Ma’lumotlar sahifa yopilganda o‘chadi. Ishni tugatgach albatta zaxira oling.</div></div>`;
   if (direktorMi() && !UI.bannerYopildi && (OQ().length || GR().length)) {
     const z = DB.meta.oxirgiZaxira, kun = z ? kunFarqi(z, bugun()) : null;
@@ -1615,25 +1634,27 @@ function renderKirish() {
           : bor ? `<div class="info-quti"><b>${esc(markazNomi())}</b></div>` : ""}
         <label class="maydon"><span>Login</span><input id="k-login" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Loginingiz" value="${esc(k.tiklashOk || "")}" autofocus></label>
         ${parolMaydon("k-parol", "Parol", { erkin: true })}
+        ${bor ? "" : `<label class="sm muted" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="k-begona"> Bu mening qurilmam emas — chiqqanda ma’lumotlar bu yerdan o‘chirilsin</label>`}
         <p class="xato" id="k-xato" ${kutish ? "" : "hidden"}>${kutish ? `Ko‘p marta xato kiritildi. ${kutish} soniyadan keyin urinib ko‘ring.` : ""}</p>
         <button type="submit" class="btn btn-primary btn-blok" ${kutish ? "disabled" : ""}>Kirish</button>
         <p class="muted sm" style="margin:0">Xodimlar login va parolni markaz rahbaridan oladi.</p>
         <button type="button" class="btn btn-ghost btn-sm" data-act="parol-unutdim" style="align-self:flex-start">${icon("message", 16)} Parolni unutdim</button>
       </form></section>
       ${bor ? "" : `<section class="card forma"><b>Bu qurilmada hali markaz yo‘q</b>
-        <p class="muted sm" style="margin:0">Hamkor markaz bo‘lsangiz, rahbaringizdan zaxira faylni olib tiklang. Yangi markaz bo‘lsangiz, ro‘yxatdan o‘ting: 14 kun bepul.</p>
+        <p class="muted sm" style="margin:0">Markazingiz boshqa kompyuter yoki telefonda ro‘yxatdan o‘tgan bo‘lsa — yuqorida login va parolingiz bilan kiring, ma’lumotlar serverdan yuklanadi. Yangi markaz bo‘lsangiz, ro‘yxatdan o‘ting: ${SOZLAMALAR.sinovKun} kun bepul.</p>
         <div class="amal-qator"><button class="btn btn-soft" data-act="kirish-tab" data-v="royxat">Ro‘yxatdan o‘tish</button><button class="btn btn-ghost" data-act="tikla-fayl">${icon("upload", 18)} Zaxiradan tiklash</button></div></section>`}
       ${pas}</div>`;
   }
   if (k.tab === "yordam" && !(bor && L.markazId)) return `<div class="kirish">${bosh}
     <section class="card forma">
-      <h2 style="margin:0;font-size:18px">Bu qurilmada markazingiz yo‘q</h2>
-      <p class="muted" style="margin:0">Markaz ma’lumotlari (o‘quvchilar, to‘lovlar, login va parol) faqat ro‘yxatdan o‘tgan <b>qurilma va brauzerda</b> saqlanadi. Shu sababli bu yerda parolni tiklab bo‘lmaydi.</p>
-      <ol class="muted sm" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
-        <li>Markazingiz ishlatilgan kompyuter yoki telefonda, <b>o‘sha brauzerda</b> (Chrome, Edge…) shu sahifani oching va «Parolni unutdim» ni bosing.</li>
-        <li>Yangi qurilmaga o‘tmoqchi bo‘lsangiz: eski qurilmada Sozlamalar → Ma’lumotlar → <b>Zaxira olish</b>, keyin bu yerda <b>Zaxiradan tiklash</b>.</li>
-        <li>Eski qurilma yo‘q bo‘lsa, sotuvchiga murojaat qiling${SOZLAMALAR.sotuvchi.tel ? `: <b>${esc(SOZLAMALAR.sotuvchi.tel)}</b>` : ""}.</li></ol>
-      <div class="amal-qator"><button type="button" class="btn btn-ghost" data-act="kirish-tab" data-v="kirish">← Kirish</button><button class="btn btn-soft" data-act="tikla-fayl">${icon("upload", 18)} Zaxiradan tiklash</button></div>
+      <h2 style="margin:0;font-size:18px">Parolni unutdingizmi?</h2>
+      <p class="muted" style="margin:0">Rahbar loginingizni yozing. Sotuvchi ro‘yxatdan o‘tishda yozilgan telefon raqamingizga qo‘ng‘iroq qilib, yangi parolni aytadi. Xodim bo‘lsangiz, parolni rahbaringizdan so‘rang.</p>
+      <div id="ps-joy" class="forma" style="padding:0">
+        <label class="maydon"><span>Rahbar logini</span><input id="ps-login" autocapitalize="none" spellcheck="false" placeholder="masalan, bilim.akmal"></label>
+        <p class="xato" id="ps-xato" hidden></p>
+        <button type="button" class="btn btn-primary" data-act="parol-sorov-login">So‘rov yuborish</button>
+      </div>
+      <div class="amal-qator"><button type="button" class="btn btn-ghost" data-act="kirish-tab" data-v="kirish">← Kirish</button></div>
     </section>${pas}</div>`;
   if (k.tab === "yordam") return `<div class="kirish">${bosh}
     <section class="card forma chat-karta">
@@ -1667,6 +1688,16 @@ async function kirishTekshir(login, parol) {
     Sessiya.qoy(x.id); k.xato = 0; UI.bolim = "bosh"; UI.dav = null; Ilova.holat = "ichida";
     try { history.replaceState(null, "", "#bosh"); } catch (e) {}
     render(); toast(`Xush kelibsiz, ${x.ism.split(" ")[0]}!`); return;
+  }
+  // Bu qurilmada topilmadi yoki parol boshqa joyda o‘zgargan — serverdan tekshiriladi (istalgan qurilmadan kirish)
+  const tugma = $('#kirish-forma [type="submit"]'); if (tugma) { tugma.disabled = true; tugma.textContent = "Tekshirilmoqda…"; }
+  const sx = await Sinx.serverKirish(login, parol, x);
+  if (tugma) { tugma.disabled = false; tugma.textContent = "Kirish"; }
+  if (sx === "xato") return;
+  if (sx) {
+    Sessiya.qoy(sx.id); k.xato = 0; UI.bolim = "bosh"; UI.dav = null; Ilova.holat = "ichida";
+    try { history.replaceState(null, "", "#bosh"); } catch (e) {}
+    render(); Server.tekshir(); toast(`Xush kelibsiz, ${sx.ism.split(" ")[0]}!`); return;
   }
   k.xato++;
   if (k.xato >= SOZLAMALAR.parolUrinish) { k.blok = Date.now() + 30000; k.xato = 0; render(); setTimeout(render, 30500); return; }
@@ -2435,10 +2466,11 @@ function renderSozlamalar() {
 
   // Ma’lumotlar
   const z = DB.meta.oxirgiZaxira;
-  return h + `<div class="kartalar yuqori">
+  return h + `<div class="kartalar yuqori">${sinxHolatHTML()}
     <section class="card forma"><div class="card-h" style="margin:0"><h2>Zaxira nusxa</h2></div>
       <p class="muted" style="margin:0">Butun bazani bitta faylga saqlaydi. Haftada bir marta oling va Telegram «Saqlangan xabarlar»ga tashlab qo‘ying.</p>
       <div class="muted sm">Oxirgi zaxira: <b>${z ? sanaMatn(z) : "hali olinmagan"}</b></div>
+      <div class="muted sm">Brauzer xotirasi: <b>${Ombor.hajmMB().toFixed(1).replace(".", ",")} MB</b> / ~5 MB band${Ombor.hajmMB() > 3.5 ? ` — <b style="color:var(--danger,#dc2626)">joy kam qoldi, zaxira oling</b>` : ""}</div>
       <button class="btn btn-primary" data-act="zaxira">${icon("download", 20)} Zaxira olish (JSON)</button></section>
     <section class="card forma"><div class="card-h" style="margin:0"><h2>Zaxiradan tiklash</h2></div>
       <p class="muted" style="margin:0">Joriy ma’lumotlar zaxiradagisi bilan almashtiriladi. Boshqa kompyuter yoki telefonga ko‘chirish ham shu yo‘l bilan. Eski versiya (v1) zaxiralari ham qabul qilinadi.</p>
@@ -2505,11 +2537,11 @@ async function tikla(matn) {
   let x;
   try { x = JSON.parse(matn); } catch (e) { toast("Fayl o‘qilmadi: bu zaxira fayli emas", "warn"); return; }
   if (!x || !Array.isArray(x.oquvchilar) || !Array.isArray(x.guruhlar)) { toast("Bu faylda zaxira ma’lumotlari topilmadi", "warn"); return; }
-  const ha = await tasdiq(`Zaxirada ${x.guruhlar.length} ta ${T.guruh}, ${x.oquvchilar.length} ta ${T.oquvchi} bor. Joriy ma’lumotlar almashtiriladi.`, { tugma: "Tiklash", sarlavha: "Zaxiradan tiklash", xavfli: true });
+  const ha = await tasdiq(`Zaxirada ${x.guruhlar.length} ta ${T.guruh}, ${x.oquvchilar.length} ta ${T.oquvchi} bor. Joriy ma’lumotlar almashtiriladi${Sinx.faol() ? " — markazning <b>barcha qurilmalarida</b> va serverda ham" : ""}.`, { tugma: "Tiklash", sarlavha: "Zaxiradan tiklash", xavfli: true });
   if (!ha) return;
   try {
     toast("Tiklanmoqda…");
-    await Ombor.almashtir(x);
+    await Ombor.almashtir({ ...x, meta: { ...(x.meta || {}), demo: false } });   // fayldan tiklangan baza hech qachon demo emas
     if (!DB.xodimlar.length) { Sessiya.tugat(); Ilova.holat = "kirish"; UI.kirish.tab = "royxat"; }
     else if (!men()) { Sessiya.tugat(); Ilova.holat = "kirish"; UI.kirish.tab = "kirish"; }
     UI.dav = null; UI.tf.oid = ""; Server.holat = "kutilmoqda"; render(); toast("Ma’lumotlar tiklandi");
@@ -3907,6 +3939,8 @@ const Server = {
     if (oldin !== this.holat + "|" + JSON.stringify(DB.litsenziya)) { if (this.holat === "ok") rejaRender(); else render(); }
   },
   boshla() {
+    // Brauzer joy tanqisligida ma’lumotni o‘zi o‘chirib yubormasligi uchun «doimiy xotira» so‘raladi
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
     if (location.hash === "#tolov") {
       try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
       if (DB.litsenziya.markazId && !DB.meta.demo) { toast("To‘lov tekshirilmoqda…"); tolovKut(12); }
@@ -3924,7 +3958,7 @@ const serverBugun = () => Server.bugun || bugun();
 
 // Server ruxsat bermaguncha ko‘rsatiladigan ekran (null — ruxsat bor)
 function serverEkran() {
-  if (DB.meta.demo || !markazBor()) return null;
+  if (!DB.meta.demo && !markazBor()) return null;
   const L = DB.litsenziya, h = litsenziyaHolati();
   const aloqa = `<p class="muted sm" style="text-align:center;margin:0">${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}</p>`;
   const zaxira = Ilova.holat === "ichida" && direktorMi() ? `<button type="button" class="btn btn-ghost btn-sm" data-act="zaxira">${icon("download", 16)} Zaxira olish</button>` : "";
@@ -3933,6 +3967,8 @@ function serverEkran() {
       <h1>${sarlavha}</h1><p>${esc(markazNomi())}</p></div>
     <section class="card forma">${matn}${tugmalar ? `<div class="amal-qator">${tugmalar}</div>` : ""}</section>${aloqa}</div>`;
   const qayta = `<button type="button" class="btn btn-primary" data-act="server-qayta">${icon("refresh", 18)} Qayta urinish</button>`;
+  if (DB.meta.demo) return demoTugadi() ? oyna("Demo muddati tugadi", `<p class="muted" style="margin:0">Demo ${DEMO_KUN} kun ko‘rish uchun. Haqiqiy ish uchun markazingizni ro‘yxatdan o‘tkazing: ${SOZLAMALAR.sinovKun} kun bepul.</p>`,
+    `<button type="button" class="btn btn-primary" data-act="demo-tugat">Ro‘yxatdan o‘tish</button>` + zaxira) : null;
 
   if (Server.holat === "kutilmoqda") return `<div class="kirish"><div class="kirish-bosh"><div class="logo katta">${esc(markazLogo())}</div><h1>${esc(markazNomi())}</h1>
     <p class="yuklanmoqda"><span class="aylana" aria-hidden="true"></span> Tekshirilmoqda…</p></div></div>`;
@@ -3965,6 +4001,9 @@ Object.assign(AMALLAR, {
       xatoKorsat("#ul-xato", /telefon/.test(e.message) ? "Telefon raqami kiritilmagan. Sozlamalarda markaz telefonini yozing yoki sotuvchiga murojaat qiling." : "Ulanib bo‘lmadi: " + (e.message || "internetni tekshiring"));
     }
   },
+  "demo-tugat": async () => {
+    if (!(await tasdiq("Demo ma’lumotlari o‘chiriladi. Demo’da o‘zingiz kiritgan narsalar kerak bo‘lsa, avval «Zaxira olish»ni bosing — ro‘yxatdan o‘tgach zaxiradan tiklaysiz.", { tugma: "Davom etish", sarlavha: "Ro‘yxatdan o‘tish" }))) return;
+    await Ombor.almashtir(boshDB()); Sessiya.tugat(); UI.kirish = { tab: "royxat", xato: 0, blok: 0, royxatOk: false }; Ilova.holatQoy("kirish"); },
   "obuna-yangila": async el => { el.disabled = true; await Server.tekshir(); render(); toast(Server.holat === "ok" ? "Holat yangilandi" : "Server bilan bog‘lanib bo‘lmadi", Server.holat === "ok" ? "ok" : "warn"); },
 });
 
@@ -4134,6 +4173,195 @@ Object.assign(AMALLAR, {
 
 
 /* =====================================================================
+   14. BULUTDA SAQLASH VA SINXRONLASH (Google Drive, Apps Script orqali)
+   Har o‘zgarish (yozuv, o‘chirish, davomat, sozlama) navbatga tushadi va
+   bir necha soniyada serverga yuboriladi. Boshqa qurilmalardagi o‘zgarishlar
+   har daqiqada olinadi. Internet bo‘lmasa, navbat qurilmada kutadi.
+   Bir yozuvni ikki qurilma o‘zgartirsa — oxirgisi qoladi; boshqa yozuvlar
+   bir-biriga tegmaydi.
+   ===================================================================== */
+const Sinx = {
+  h: { s: 0, navbat: {}, soz: "", sh: "", toliq: "" },   // s — serverdagi versiya; toliq: "" | "birinchi" | "almashtir"
+  jim: false,        // serverdan kelganini qo‘llayotganda navbatga yozilmaydi
+  ish: false, taymer: null, holat: "", oxirgi: 0, xatolar: 0,
+  kalit: () => SOZLAMALAR.omborKaliti + "-sinx",
+  faol: () => !!(SOZLAMALAR.server && DB.litsenziya.markazId && DB.litsenziya.token && !DB.meta.demo),
+  yukla() {
+    try { this.h = { s: 0, navbat: {}, soz: "", sh: "", toliq: "", ...JSON.parse(Mahalliy.ol(this.kalit()) || "{}") }; } catch (e) {}
+    if (!this.h.s && !this.h.toliq) this.h.toliq = "birinchi";   // avvalgi versiyadagi markaz: hamma ma’lumot bir marta yuklanadi
+  },
+  saqla() { Mahalliy.qoy(this.kalit(), JSON.stringify(this.h)); },
+  kutmoqda() { return Object.keys(this.h.navbat).length + (this.h.toliq ? 1 : 0); },
+  belgila(n, k) {
+    if (this.jim || k === undefined || k === null) return;
+    this.h.navbat[n + "|" + k] = Date.now(); this.saqla(); this.rejala();
+  },
+  objTekshir() {
+    if (this.jim) return;
+    const a = JSON.stringify(DB.sozlamalar), b = JSON.stringify(DB.shablonlar);
+    if (a !== this.h.soz) { this.h.soz = a; this.belgila("_obj", "sozlamalar"); }
+    if (b !== this.h.sh) { this.h.sh = b; this.belgila("_obj", "shablonlar"); }
+  },
+  // Joriy qiymat (yo‘q bo‘lsa null — o‘chirilgan)
+  qiymat(n, k) {
+    if (n === "davomat" || n === "bekorlar") return k in DB[n] ? DB[n][k] : null;
+    if (n === "_obj") return k === "sozlamalar" || k === "shablonlar" ? DB[k] : null;
+    return (DB[n] || []).find(x => x.id === k) || null;
+  },
+  hammasi(t) {
+    const r = [];
+    KOLLEKSIYALAR.forEach(n => DB[n].forEach(x => { if (x.id) r.push({ n, k: x.id, v: x, t }); }));
+    ["davomat", "bekorlar"].forEach(n => Object.keys(DB[n]).forEach(k => r.push({ n, k, v: DB[n][k], t })));
+    r.push({ n: "_obj", k: "sozlamalar", v: DB.sozlamalar, t }, { n: "_obj", k: "shablonlar", v: DB.shablonlar, t });
+    return r;
+  },
+  // Serverdan kelgan o‘zgarishlarni bazaga qo‘llaydi (qurilmada yuborilmagan yangiroq o‘zgarish bo‘lsa — o‘shani saqlaydi)
+  qolla(ozg, db = DB) {
+    let n = 0;
+    for (const it of ozg || []) {
+      const mahalliy = this.h.navbat[it.n + "|" + it.k];
+      if (db === DB && mahalliy && mahalliy > it.t) continue;
+      if (it.n === "davomat" || it.n === "bekorlar") { if (it.v === null) delete db[it.n][it.k]; else db[it.n][it.k] = it.v; }
+      else if (it.n === "_obj") { if (it.v && (it.k === "sozlamalar" || it.k === "shablonlar")) db[it.k] = { ...db[it.k], ...it.v }; }
+      else if (Array.isArray(db[it.n])) {
+        const i = db[it.n].findIndex(x => x.id === it.k);
+        if (it.v === null) { if (i >= 0) db[it.n].splice(i, 1); }
+        else if (i >= 0) db[it.n][i] = it.v; else db[it.n].push(it.v);
+      } else continue;
+      n++;
+    }
+    if (db === DB) { this.h.soz = JSON.stringify(DB.sozlamalar); this.h.sh = JSON.stringify(DB.shablonlar); }
+    return n;
+  },
+  rejala(ms = 2500) { clearTimeout(this.taymer); this.taymer = setTimeout(() => this.yubor(), ms); },
+  async yubor() {
+    if (!this.faol()) return false;
+    if (this.ish) { this.rejala(3000); return false; }
+    this.ish = true;
+    const L = DB.litsenziya, toliq = this.h.toliq, navbat = { ...this.h.navbat };
+    try {
+      const ozg = toliq ? this.hammasi(toliq === "almashtir" ? Date.now() : 1) : Object.keys(navbat).map(nk => {
+        const i = nk.indexOf("|"), n = nk.slice(0, i), k = nk.slice(i + 1);
+        return { n, k, v: this.qiymat(n, k), t: navbat[nk] };
+      });
+      const j = await Server.sorov("sinx", { id: L.markazId, token: L.token, s: this.h.s, ozg, almashtir: toliq === "almashtir" });
+      if (!j.ok) { const e = new Error(j.xato || "Server rad etdi"); e.kod = j.kod; throw e; }
+      for (const nk in navbat) if (this.h.navbat[nk] === navbat[nk]) delete this.h.navbat[nk];
+      if (this.h.toliq === toliq) this.h.toliq = "";
+      this.jim = true;
+      let n = 0;
+      try { n = this.qolla(j.ozg); } finally { this.jim = false; }
+      this.h.s = j.s; this.saqla();
+      if (n) { ozgardi(); Ombor.saqla(); if (Ilova.holat === "ichida") { if (!men()) { Sessiya.tugat(); render(); } else rejaRender(); } }
+      this.holat = "ok"; this.oxirgi = Date.now(); this.xatolar = 0;
+      if (this.kutmoqda()) this.rejala(1000);
+      return true;
+    } catch (e) {
+      this.holat = e.kod === "topilmadi" ? "topilmadi" : "xato"; this.xatolar++;
+      if (this.kutmoqda()) this.rejala(Math.min(300000, 5000 * 2 ** Math.min(this.xatolar, 6)));   // internet yo‘q: 10 s, 20 s … 5 daqiqagacha
+      return false;
+    } finally { this.ish = false; }
+  },
+  boshla() {
+    this.yukla();
+    this.rejala(1500);
+    setInterval(() => { if (document.visibilityState === "visible") this.yubor(); }, 60000);
+    window.addEventListener("online", () => this.rejala(500));
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") this.rejala(500); });
+  },
+
+  // Istalgan qurilmadan kirish: login va parol serverda tekshiriladi, markaz ma’lumoti yuklab olinadi
+  async serverKirish(login, parol, mahalliyXodim) {
+    if (!SOZLAMALAR.server || !navigator.onLine) return false;
+    let j;
+    try { j = await Server.sorov("kirish", { login: login.trim().toLowerCase(), xesh: await pinXesh(parol) }); } catch (e) { return false; }
+    if (!j.ok) { if (j.kod === "blok" || /o‘chirilgan|bir nechta/.test(j.xato || "")) { xatoKorsat("#k-xato", j.xato); return "xato"; } return false; }
+    const shuMarkaz = DB.litsenziya.markazId === j.id;
+    if (markazBor() && !shuMarkaz && !DB.meta.demo) {
+      // Qurilmada boshqa markaz bor: u serverga to‘liq yuklangan bo‘lsagina almashtiriladi
+      if (this.faol()) await this.yubor();
+      if (!this.faol() || this.kutmoqda()) { xatoKorsat("#k-xato", "Bu qurilmada boshqa markaz ma’lumotlari bor va ular hali serverga yuklanmagan. Avval o‘sha markazga kirib, internetga ulang yoki zaxira oling."); return "xato"; }
+      if (!(await tasdiq(`Bu qurilmadagi «${esc(markazNomi())}» o‘rniga «${esc(j.nomi)}» ochiladi. U markazning ma’lumotlari serverda saqlangan — keyin yana login bilan kirsa bo‘ladi.`, { tugma: "Davom etish", sarlavha: "Boshqa markaz" }))) return "xato";
+    }
+    if (shuMarkaz) {
+      // Shu markaz: parol boshqa qurilmada o‘zgargan — yangilarini olamiz
+      this.h.s = Math.min(this.h.s, 0); await this.yubor();
+    } else {
+      const db = boshDB();
+      this.qolla(j.ozg, db);
+      db.litsenziya = { ...db.litsenziya, royxat: j.royxat || bugun(), sinovTugash: j.sinovTugash || "", tugash: j.tugash || "", markazId: j.id, token: j.token, holat: j.holat || "faol",
+        xabar: j.xabar || "", tarif: j.tarif || "", tekshirildi: Date.now(), tolovYoqilgan: !!j.tolovYoqilgan, kutilayotgan: +j.kutilayotgan || 0,
+        ...(j.tariflar ? { tariflar: j.tariflar } : {}), ...(j.oylar ? { oylar: j.oylar } : {}) };
+      this.jim = true;
+      try { await Ombor.almashtir(db); } finally { this.jim = false; }
+      this.h = { s: j.s, navbat: {}, soz: JSON.stringify(DB.sozlamalar), sh: JSON.stringify(DB.shablonlar), toliq: "" }; this.saqla();
+      Server.bugun = j.bugun || ""; Server.holat = "ok";
+    }
+    const x = DB.xodimlar.find(z => z.id === j.xodimId) || DB.xodimlar.find(z => (z.login || "").toLowerCase() === login.trim().toLowerCase());
+    if (!x) { xatoKorsat("#k-xato", "Xodim topilmadi. Rahbaringizga murojaat qiling."); return "xato"; }
+    const begona = $("#k-begona");
+    if (begona && begona.checked) Mahalliy.qoy("oquv-crm-begona", "1"); else if (!shuMarkaz) Mahalliy.ochir("oquv-crm-begona");
+    return x;
+  },
+  // «Begona kompyuter»: chiqqanda ma’lumot serverga yuborilib, shu brauzerdan o‘chiriladi
+  async begonaTozala() {
+    if (Mahalliy.ol("oquv-crm-begona") !== "1") return false;
+    if (this.kutmoqda()) await this.yubor();
+    if (this.kutmoqda()) { toast("Internet yo‘q: ma’lumotlar hali serverga yuborilmagan, shu sababli bu qurilmada qoldirildi.", "warn"); return false; }
+    this.jim = true;
+    try { await Ombor.almashtir(boshDB()); } finally { this.jim = false; }
+    this.h = { s: 0, navbat: {}, soz: "", sh: "", toliq: "" }; Mahalliy.ochir(this.kalit()); Mahalliy.ochir("oquv-crm-begona");
+    toast("Chiqdingiz. Ma’lumotlar bu kompyuterdan o‘chirildi", "ok");
+    return true;
+  },
+};
+
+// Ombor yozuvlari navbatga tushadi
+(() => {
+  const yoz = Ombor.yoz, ochir = Ombor.ochir, dav = Ombor.davomatYoz, bekor = Ombor.bekorYoz, soz = Ombor.sozYoz, alm = Ombor.almashtir;
+  Ombor.yoz = function (kol, obj) { const r = yoz.call(this, kol, obj); Sinx.belgila(kol, r.id); return r; };
+  Ombor.ochir = function (kol, id) { ochir.call(this, kol, id); Sinx.belgila(kol, id); };
+  Ombor.davomatYoz = function (kalit, b) { dav.call(this, kalit, b); Sinx.belgila("davomat", kalit); };
+  Ombor.bekorYoz = function (kalit, sabab) { bekor.call(this, kalit, sabab); Sinx.belgila("bekorlar", kalit); };
+  Ombor.sozYoz = function () { soz.call(this); Sinx.objTekshir(); };
+  // Zaxiradan tiklash / yangi ro‘yxat: serverdagi nusxa shu baza bilan to‘liq almashtiriladi
+  Ombor.almashtir = async function (yangi) {
+    await alm.call(this, yangi);
+    if (Sinx.jim) return;
+    Sinx.h = { s: 0, navbat: {}, soz: JSON.stringify(DB.sozlamalar), sh: JSON.stringify(DB.shablonlar), toliq: "almashtir" }; Sinx.saqla(); Sinx.rejala(500);
+  };
+})();
+
+// Sozlamalar → Ma’lumotlar: bulut holati
+function sinxHolatHTML() {
+  if (!Sinx.faol()) return "";
+  const k = Sinx.kutmoqda(), vaqt = Sinx.oxirgi ? `${pad2(new Date(Sinx.oxirgi).getHours())}:${pad2(new Date(Sinx.oxirgi).getMinutes())}` : "";
+  const matn = k ? `<b style="color:var(--warn,#b45309)">${k} ta o‘zgarish hali yuborilmagan</b>${Sinx.holat === "xato" ? " — internet yo‘q, ulanganda o‘zi yuboriladi" : ""}`
+    : Sinx.oxirgi ? `<b>Hammasi saqlangan</b> · ${vaqt}` : "Tekshirilmoqda…";
+  return `<section class="card forma"><div class="card-h" style="margin:0"><h2>Bulutda saqlash</h2></div>
+    <p class="muted" style="margin:0">Ma’lumotlar serverda ham saqlanadi. Boshqa kompyuter yoki telefonda shu sahifani ochib, login va parol bilan kiring — hammasi o‘sha yerda bo‘ladi.</p>
+    <div class="muted sm">${matn}</div>
+    <button class="btn btn-soft" data-act="sinx-hozir">${icon("refresh", 18)} Hozir sinxronlash</button></section>`;
+}
+Object.assign(AMALLAR, {
+  "sinx-hozir": async el => { el.disabled = true; const ok = await Sinx.yubor(); render(); toast(ok ? "Sinxronlandi" : "Server bilan bog‘lanib bo‘lmadi", ok ? "ok" : "warn"); },
+  "parol-sorov-login": async el => {
+    const l = ($("#ps-login") || {}).value || "";
+    if (!l.trim()) return xatoKorsat("#ps-xato", "Rahbar loginini yozing.");
+    el.disabled = true;
+    try { const j = await Server.sorov("parol_sorov_login", { login: l.trim().toLowerCase() }); if (!j.ok) throw new Error(j.xato); }
+    catch (e) { el.disabled = false; return xatoKorsat("#ps-xato", "Yuborilmadi: " + (e.name === "TypeError" ? "internet yo‘q" : e.message)); }
+    const q = $("#ps-joy"); if (q) q.innerHTML = `<div class="info-quti"><span class="matn"><b>So‘rov yuborildi.</b> Sotuvchi ro‘yxatdan o‘tishda yozilgan telefon raqamingizga qo‘ng‘iroq qilib, yangi parolni aytadi. Keyin shu yerda login va yangi parol bilan kiring.</span></div>`;
+  },
+});
+// Chiqishda «begona kompyuter» bo‘lsa — tozalash
+(() => {
+  const asl = AMALLAR.chiqish;
+  AMALLAR.chiqish = async (...a) => { const tozalandi = await Sinx.begonaTozala(); asl(...a); if (tozalandi) { UI.kirish.tab = "kirish"; render(); } };
+})();
+
+
+/* =====================================================================
    11. DEMO MA’LUMOTLAR (bugungi sanaga nisbatan yaratiladi)
    ===================================================================== */
 const DEMO_XODIMLAR = [
@@ -4279,7 +4507,7 @@ async function demoDB() {
     { id: "s2", oquvchiId: "o16", ism: "Rustamov aka", tel: "+998 93 707 80 90", turi: "Shikoyat", matn: "Xonada sovuq, isitish ishlamayapti.", holat: "jarayonda", javob: "", xodimId: "x2", filialId: "f1", yaratildi: Date.now() - 864e5 },
     { id: "s3", oquvchiId: "", ism: "Sevara", tel: "+998 97 111 00 22", turi: "Taklif", matn: "Shanba kuni kechki guruh ochsangiz yaxshi bo‘lardi.", holat: "hal", javob: "Rahmat! Dekabrdan shanba 17:00 guruhi ochiladi.", xodimId: "x1", filialId: "", yaratildi: Date.now() - 6 * 864e5 },
   ];
-  db.meta = { oxirgiZaxira: b, demo: true };
+  db.meta = { oxirgiZaxira: b, demo: true, demoSana: bugun() };
   return db;
 }
 
@@ -4297,6 +4525,7 @@ async function demoDB() {
   Ombor.yukla();
   Ilova.maLumotTayyor();
   Server.boshla();
+  Sinx.boshla();
   // Sotuvchi taqdimoti uchun: fayl manzili oxiriga #demo qo‘shib ochilsa, namunaviy markaz yuklanadi
   if (location.hash === "#demo") { try { history.replaceState(null, "", "#bosh"); } catch (e) {} AMALLAR.demo(); }
 })();
