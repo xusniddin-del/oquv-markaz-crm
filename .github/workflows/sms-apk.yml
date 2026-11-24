@@ -1,0 +1,64 @@
+# «O‘quv Markaz SMS» Android yordamchi ilovasini yig'adi.
+# Imzo kaliti GitHub Secrets'da: SMS_KEYSTORE_B64 (keystore fayl, base64) va SMS_KEYSTORE_PASS.
+# Kalit bo'lsa — imzolangan release APK yig'ilib, repo ildiziga Oquv-Markaz-SMS.apk bo'lib qaytib yoziladi.
+# Kalit bo'lmasa — faqat debug yig'iladi (kod kompilyatsiya bo'lishini tekshirish uchun).
+name: O‘quv Markaz SMS ilovasi
+on:
+  push:
+    paths: ['android-sms/**', '.github/workflows/sms-apk.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: sms-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.7' }
+      - name: Kalit bormi?
+        id: ks
+        env:
+          B64: ${{ secrets.SMS_KEYSTORE_B64 }}
+          PASS: ${{ secrets.SMS_KEYSTORE_PASS }}
+        run: |
+          if [ -n "$B64" ] && [ -n "$PASS" ]; then
+            echo "$B64" | base64 -d > "$RUNNER_TEMP/sms.jks"
+            echo "file=$RUNNER_TEMP/sms.jks" >> "$GITHUB_OUTPUT"
+            echo "have=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::SMS_KEYSTORE_B64 / SMS_KEYSTORE_PASS yo'q — faqat debug yig'iladi"
+            echo "have=0" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Debug (tekshiruv)
+        if: steps.ks.outputs.have != '1'
+        run: gradle -p android-sms assembleDebug --no-daemon
+      - name: Release (imzolangan)
+        if: steps.ks.outputs.have == '1'
+        env:
+          SMS_KEYSTORE_FILE: ${{ steps.ks.outputs.file }}
+          SMS_KEYSTORE_PASS: ${{ secrets.SMS_KEYSTORE_PASS }}
+        run: |
+          gradle -p android-sms assembleRelease --no-daemon
+          cp android-sms/app/build/outputs/apk/release/app-release.apk Oquv-Markaz-SMS.apk
+          "$ANDROID_HOME"/build-tools/$(ls "$ANDROID_HOME"/build-tools | sort -V | tail -1)/apksigner verify --print-certs Oquv-Markaz-SMS.apk | head -3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oquvmarkaz-sms
+          path: |
+            Oquv-Markaz-SMS.apk
+            android-sms/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
+      - name: APK'ni repoga yozish
+        if: steps.ks.outputs.have == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898388+github-actions[bot]@users.noreply.github.com"
+          git add Oquv-Markaz-SMS.apk
+          git commit -m "Oquv-Markaz-SMS.apk yangilandi (CI)" || exit 0
+          git push || echo "::warning::push bo'lmadi"

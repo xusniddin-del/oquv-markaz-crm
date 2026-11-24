@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+    <Button android:id="@+id/btnBack" style="@style/BtnGhost" android:layout_width="wrap_content" android:layout_height="44dp" android:paddingLeft="18dp" android:paddingRight="18dp" android:text="@string/back"/>
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="@string/settings" android:textColor="@color/ink" android:textSize="22sp" android:textStyle="bold"/>
+
+    <LinearLayout style="@style/Card">
+        <TextView style="@style/H" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/lang"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp">
+            <Button android:id="@+id/btnLangUz" style="@style/BtnGhost" android:layout_width="0dp" android:layout_weight="1" android:layout_marginRight="6dp" android:text="@string/lang_uz"/>
+            <Button android:id="@+id/btnLangRu" style="@style/BtnGhost" android:layout_width="0dp" android:layout_weight="1" android:layout_marginLeft="6dp" android:text="@string/lang_ru"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout style="@style/Card">
+        <TextView style="@style/H" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sim"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/sim_hint" android:textColor="@color/muted" android:textSize="13sp"/>
+        <Button android:id="@+id/btnSim" style="@style/BtnGhost" android:layout_marginTop="10dp"/>
+    </LinearLayout>
+
+    <LinearLayout style="@style/Card">
+        <TextView style="@style/H" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/hours"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/hours_hint" android:textColor="@color/muted" android:textSize="13sp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp">
+            <Button android:id="@+id/btnFrom" style="@style/BtnGhost" android:layout_width="0dp" android:layout_weight="1" android:layout_marginRight="6dp"/>
+            <Button android:id="@+id/btnTo" style="@style/BtnGhost" android:layout_width="0dp" android:layout_weight="1" android:layout_marginLeft="6dp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout style="@style/Card">
+        <TextView style="@style/H" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/bat_title"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/bat_short" android:textColor="@color/muted" android:textSize="13sp"/>
+        <Button android:id="@+id/btnBattery" style="@style/BtnGhost" android:layout_marginTop="10dp" android:text="@string/bat_open"/>
+    </LinearLayout>
+
+    <Button android:id="@+id/btnUnpair" style="@style/BtnGhost" android:layout_marginTop="18dp" android:textColor="#c2401f" android:text="@string/unpair"/>
+    <TextView android:id="@+id/txtVer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:gravity="center" android:textColor="@color/muted" android:textSize="12sp"/>
+</LinearLayout>
+</ScrollView>

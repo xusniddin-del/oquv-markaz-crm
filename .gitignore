@@ -5,3 +5,7 @@ __pycache__/
 *generator*
 kalit*.json
 *.pem
+
+# Android imzo kaliti hech qachon repoga tushmasin
+*.jks
+*.keystore

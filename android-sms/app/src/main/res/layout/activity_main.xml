@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+    <!-- sarlavha -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+        android:gravity="center_vertical" android:background="@drawable/header" android:paddingLeft="20dp" android:paddingRight="20dp"
+        android:paddingTop="26dp" android:paddingBottom="30dp">
+        <ImageView android:layout_width="48dp" android:layout_height="48dp" android:src="@mipmap/ic_launcher" android:contentDescription="@null"/>
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginLeft="12dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/app_name" android:textColor="#ffffff" android:textSize="21sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/txtAcc" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/tagline" android:textColor="#dbeafe" android:textSize="13.5sp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 1) ULASH -->
+    <LinearLayout android:id="@+id/viewPair" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+        <LinearLayout style="@style/Card">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/pair_title" android:textColor="@color/ink" android:textSize="20sp" android:textStyle="bold"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/pair_steps" android:textColor="@color/muted" android:textSize="14.5sp" android:lineSpacingExtra="4dp"/>
+            <EditText android:id="@+id/editCode" android:layout_width="match_parent" android:layout_height="72dp" android:layout_marginTop="18dp"
+                android:background="@drawable/input" android:gravity="center" android:hint="000000" android:inputType="number" android:maxLength="6"
+                android:letterSpacing="0.4" android:textColor="@color/ink" android:textSize="32sp" android:textStyle="bold" android:importantForAutofill="no"/>
+            <TextView android:id="@+id/pairErr" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="#c2401f" android:textSize="14sp"/>
+            <Button android:id="@+id/btnPair" style="@style/Btn" android:layout_marginTop="8dp" android:text="@string/pair_btn"/>
+        </LinearLayout>
+        <LinearLayout style="@style/Card">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/safe_title" android:textColor="@color/brand" android:textSize="17sp" android:textStyle="bold"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/safe_text" android:textColor="@color/ink" android:textSize="14sp" android:lineSpacingExtra="5dp"/>
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="@string/pair_note" android:textColor="@color/muted" android:textSize="13sp" android:lineSpacingExtra="3dp"/>
+        <Button android:id="@+id/btnLangPair" style="@style/BtnGhost" android:layout_marginTop="12dp" android:text="@string/lang_other"/>
+    </LinearLayout>
+
+    <!-- 2) ASOSIY -->
+    <LinearLayout android:id="@+id/boxUpdate" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/card" android:padding="16dp" android:layout_marginLeft="16dp" android:layout_marginRight="16dp" android:layout_marginTop="16dp" android:visibility="gone">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/upd_title" android:textColor="@color/brand" android:textSize="17sp" android:textStyle="bold"/>
+        <TextView android:id="@+id/txtUpdate" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/ink" android:textSize="14sp" android:lineSpacingExtra="3dp"/>
+        <Button android:id="@+id/btnUpdate" style="@style/Btn" android:layout_height="46dp" android:layout_marginTop="10dp" android:text="@string/upd_btn"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/upd_hint" android:textColor="@color/muted" android:textSize="12.5sp"/>
+    </LinearLayout>
+    <LinearLayout android:id="@+id/viewMain" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:visibility="gone">
+        <Button android:id="@+id/btnToggle" android:layout_width="match_parent" android:layout_height="96dp" android:textColor="#ffffff" android:textSize="22sp" android:textStyle="bold" android:textAllCaps="false" android:stateListAnimator="@null" android:text="@string/st_on"/>
+        <TextView android:id="@+id/txtStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:gravity="center" android:textColor="@color/muted" android:textSize="14sp"/>
+
+        <LinearLayout android:id="@+id/boxPaused" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/warn" android:padding="14dp" android:layout_marginTop="12dp" android:visibility="gone">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/n_check_sim" android:textColor="@color/warn" android:textSize="14.5sp" android:textStyle="bold"/>
+            <Button android:id="@+id/btnResume" style="@style/Btn" android:layout_height="44dp" android:layout_marginTop="10dp" android:text="@string/resume"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="4dp">
+            <LinearLayout style="@style/Card" android:layout_width="0dp" android:layout_weight="1" android:layout_marginRight="7dp">
+                <TextView style="@style/H" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/today"/>
+                <TextView android:id="@+id/txtToday" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/brand" android:textSize="30sp" android:textStyle="bold"/>
+            </LinearLayout>
+            <LinearLayout style="@style/Card" android:layout_width="0dp" android:layout_weight="1" android:layout_marginLeft="7dp">
+                <TextView style="@style/H" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sim"/>
+                <TextView android:id="@+id/txtSim" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/ink" android:textSize="16sp" android:textStyle="bold" android:maxLines="2"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout style="@style/Card">
+            <TextView style="@style/H" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last10"/>
+            <LinearLayout android:id="@+id/listLog" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
+        </LinearLayout>
+
+        <Button android:id="@+id/btnSettings" style="@style/BtnGhost" android:layout_marginTop="14dp" android:text="@string/settings"/>
+    </LinearLayout>
+</LinearLayout>
+</ScrollView>

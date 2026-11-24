@@ -40,3 +40,10 @@ Ma’lumotlar sayt manziliga bog‘langan, shuning uchun sayt manzilini o‘zgar
 ## Server manzili
 
 Server manzili ikki joyda yoziladi: `src/1-asos.js` dagi `server:` va `admin/index.html` dagi `const SERVER`.
+
+## Avto-SMS yordamchi ilova (`android-sms/`)
+
+«O‘quv Markaz SMS» — markaz telefoniga o‘rnatiladigan kichik Android ilova: CRM navbatga qo‘ygan SMS'larni markazning o‘z SIM kartasidan yuboradi.
+- GitHub Actions yig‘adi (`.github/workflows/sms-apk.yml`), Android SDK kerak emas.
+- Imzo kaliti repoda yo‘q: GitHub → Settings → Secrets → Actions'da `SMS_KEYSTORE_B64` va `SMS_KEYSTORE_PASS`.
+- Yangi versiya: `Upd.kt` (CODE, NAME), `app/build.gradle.kts` (versionCode, versionName) va `sms-version.json` ni bir xil oshiring.
