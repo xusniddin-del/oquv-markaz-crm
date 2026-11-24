@@ -13,7 +13,7 @@
 
 const VARAQ = "Markazlar";
 const USTUNLAR = ["id", "token", "nomi", "rahbar", "tel", "manzil", "hajm", "login", "royxat", "sinovTugash", "tugash",
-  "holat", "xabar", "izoh", "oxirgiKirish", "oquvchilar", "guruhlar", "xodimlar", "versiya", "tarif", "tiklash", "fayl"];
+  "holat", "xabar", "izoh", "oxirgiKirish", "oquvchilar", "guruhlar", "xodimlar", "versiya", "tarif", "tiklash", "fayl", "smsCfg"];
 const TOLOV_VARAQ = "Tolovlar";
 const TOLOV_USTUNLAR = ["billId", "markazId", "markaz", "tarif", "oylar", "summa", "holat", "yaratildi", "tolandi", "usul", "havola", "muhit", "izoh"];
 const XABAR_VARAQ = "Xabarlar";   // markaz ↔ sotuvchi chati (parolni unutish va boshqa savollar)
@@ -50,10 +50,13 @@ function sozlash() {
     P.setProperty("ADMIN_PAROL", PAROL);
   }
   if (!P.getProperty("ADMIN_PAROL")) throw new Error("Admin parol hali qo‘yilmagan: PAROL qatoriga parol yozib, qayta Run qiling.");
-  varaq(); tolovVaraq(); xabarVaraq(); loginVaraq(); papka();
+  varaq(); tolovVaraq(); xabarVaraq(); loginVaraq(); smsTelVaraq(); smsVaraq(); papka();
   // Kutilayotgan to‘lovlarni har 10 daqiqada tekshiruvchi taymer
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "tolovlarniTekshir").forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger("tolovlarniTekshir").timeBased().everyMinutes(10).create();
+  // Avto-SMS: har kecha eski SMS yozuvlarini tozalash
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "smsTozalash").forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger("smsTozalash").timeBased().everyDays(1).atHour(3).create();
   Logger.log(P.getProperty("TEZCHECK_KALIT") ? "Tayyor. To‘lov tizimi ulangan." : "Tayyor. Diqqat: TEZCHECK_KALIT qo‘yilmagan — online to‘lov ishlamaydi.");
 }
 
@@ -249,6 +252,13 @@ function doPost(e) {
   let d;
   try { d = JSON.parse(e.postData.contents); } catch (x) { return javob({ ok: false, xato: "So‘rov noto‘g‘ri." }); }
   if (d && d.amal === "sinx") { try { const t = sinxTez(d); if (t) return javob(t); } catch (x) {} }
+  // Telefondagi «O‘quv Markaz SMS» ilovasi: {action, dt} → javob yoki {error}
+  if (d && typeof d.action === "string" && d.action.indexOf("sms") === 0) {
+    try { const t = smsTez(d); if (t) return javob(t); } catch (x) { return javob({ error: String((x && x.message) || x) }); }
+    const lk = LockService.getScriptLock();
+    try { lk.waitLock(25000); } catch (x) { return javob({ error: "Server band" }); }
+    try { return javob(smsQurilma(d)); } catch (x) { return javob({ error: String((x && x.message) || x) }); } finally { lk.releaseLock(); }
+  }
   const lock = LockService.getScriptLock();
   try { lock.waitLock(25000); } catch (x) { return javob({ ok: false, xato: "Server band. Birozdan keyin urinib ko‘ring." }); }
   try { return javob(amal(d || {})); }
@@ -367,6 +377,9 @@ function amal(d) {
     return { ok: true };   // login bor-yo‘qligi oshkor qilinmaydi
   }
 
+  // Avto-SMS (CRM tomoni)
+  if (/^sms[A-Z]/.test(String(d.amal || ""))) return smsAmal(sh, d);
+
   // Markaz tarif tanlab to‘lov qilmoqchi: TezCheck'da chek yaratiladi, to‘lov sahifasi havolasi qaytadi
   if (d.amal === "tolov_yarat") {
     const o = markazTop(sh, d);
@@ -455,6 +468,7 @@ function amal(d) {
         tariflar: TARIFLAR, oylar: OYLAR, tolovYoqilgan: !!prop("TEZCHECK_KALIT") };
     }
 
+    if (d.amal === "admin_sms" || d.amal === "admin_sms_sozla") return smsAdmin(d);
     const o = qatorlar(sh).find(x => x.id === d.id);
     if (!o) return { ok: false, xato: "Markaz topilmadi." };
     if (d.amal === "admin_ozgar") {
@@ -505,4 +519,289 @@ function amal(d) {
     }
   }
   return { ok: false, xato: "Noma’lum amal." };
+}
+
+/* ---------- 7. Avto-SMS ----------
+ * CRM → SmsQueue (navbat) → markaz telefonidagi «O‘quv Markaz SMS» yordamchi ilovasi har 30 soniyada navbatni oladi (smsPull)
+ * → SIM kartadan yuboradi → holatni qaytaradi (smsReport). Ulash: 6 xonali kod (10 daqiqa), bitta markazga 1 ta faol telefon.
+ * Telefon ilovasi so‘rovlari {action, dt} ko‘rinishida keladi va xato {error} bilan qaytadi (Oldi-Berdi SMS bilan bir xil).
+ * Global sozlama — Script Properties'da SMS_CFG: { off, defLimit, gap }. Markaz sozlamasi — Markazlar.smsCfg (JSON). */
+const SMS_TEL_VARAQ = "SmsDevices", SMS_TEL_USTUNLAR = ["id", "acc", "token", "model", "sim", "appVer", "lastPing", "status", "createdAt"];
+const SMS_VARAQ = "SmsQueue", SMS_USTUNLAR = ["id", "acc", "pid", "phone", "text", "source", "status", "attempts", "error", "createdAt", "pickedAt", "sentAt", "deliveredAt", "updatedAt", "tur", "kalit", "ism"];
+const SMS_ILOVA = { versiya: "1.0", havola: CRM_MANZIL + "Oquv-Markaz-SMS.apk" };   // telefondagi ilovaning eng yangi versiyasi (sms-version.json bilan bir xil)
+const SMS_TURLAR = ["qarz", "kelmadi", "bekor", "lid"];   // avtomatik qoidalar
+const smsTelVaraq = () => varaqOl(SMS_TEL_VARAQ, SMS_TEL_USTUNLAR);
+const smsVaraq = () => varaqOl(SMS_VARAQ, SMS_USTUNLAR);
+const smsTellar = sh => qatorlarOl(sh || smsTelVaraq(), SMS_TEL_USTUNLAR, "id");
+const smsTelYoz = (sh, o) => yozOl(sh, SMS_TEL_USTUNLAR, o);
+const smsQatorlar = sh => qatorlarOl(sh || smsVaraq(), SMS_USTUNLAR, "id");
+const smsYoz = (sh, o) => yozOl(sh, SMS_USTUNLAR, o);
+const smsId = () => Utilities.getUuid().replace(/-/g, "").slice(0, 16);
+
+function smsGlobal() {
+  let o = {}; try { o = JSON.parse(prop("SMS_CFG") || "{}") || {}; } catch (e) {}
+  return { off: !!o.off, defLimit: +o.defLimit >= 10 ? Math.min(150, +o.defLimit) : 50, gap: +o.gap >= 5 ? Math.min(300, +o.gap) : 25 };
+}
+function smsCfg(o) {
+  const g = smsGlobal(); let c = {};
+  try { c = JSON.parse(o.smsCfg || "{}") || {}; } catch (e) {}
+  const hm = (v, d) => (/^\d{2}:\d{2}$/.test(String(v || "")) ? String(v) : d);
+  const q = {}; SMS_TURLAR.forEach(k => { q[k] = !c.q || c.q[k] !== false; });
+  return { auto: !!c.auto, agreed: !!c.agreed, limit: Math.min(150, Math.max(10, +c.limit || g.defLimit)), from: hm(c.from, "09:00"), to: hm(c.to, "21:00"), gap: g.gap, q };
+}
+// Obuna tugagan yoki bloklangan markazdan SMS ketmaydi
+const smsObuna = o => o.holat !== "bloklangan" && [o.sinovTugash, o.tugash].filter(Boolean).sort().pop() >= bugun();
+function smsTelefon(accId, l) { return (l || smsTellar()).find(d => d.acc === accId && d.status === "active") || null; }
+function smsPing(d) { return Math.max(+d.lastPing || 0, +(CacheService.getScriptCache().get("smsping_" + d.acc) || 0)); }
+const smsOnline = d => !!d && Date.now() - smsPing(d) < 3 * 60000;
+const smsKunBoshi = () => new Date(bugun() + "T00:00:00+05:00").getTime();
+function smsBugun(accId, l) { const t0 = smsKunBoshi(); return l.filter(q => q.acc === accId && +q.createdAt >= t0 && q.status !== "cancelled"); }
+function smsPub(q) {
+  return { id: q.id, pid: q.pid, ism: q.ism, phone: q.phone, text: q.text, source: q.source, tur: q.tur, status: q.status, error: q.error || "",
+    attempts: +q.attempts || 0, createdAt: +q.createdAt || 0, sentAt: +q.sentAt || 0, deliveredAt: +q.deliveredAt || 0 };
+}
+function devPub(d) { return d ? { model: d.model, sim: d.sim, appVer: d.appVer, lastPing: smsPing(d), online: smsOnline(d), createdAt: +d.createdAt || 0 } : null; }
+// Telefon raqami: 998XXXXXXXXX (12 raqam). Yaroqsiz bo‘lsa — ""
+function smsRaqam(t) {
+  let r = String(t || "").replace(/\D/g, "");
+  if (r.length === 9) r = "998" + r;
+  return /^998\d{9}$/.test(r) ? r : "";
+}
+// 10 daqiqada javob kelmagan «sending» — qaytadan navbatga (3 urinishdan keyin «failed»)
+function smsQaytar(accId, l, sh) {
+  const lim = Date.now() - 10 * 60000;
+  l.forEach(q => {
+    if (q.acc !== accId || q.status !== "sending" || +q.pickedAt > lim) return;
+    if (+q.attempts >= 3) { q.status = "failed"; q.error = q.error || "Telefon javob bermadi"; } else q.status = "queued";
+    q.updatedAt = Date.now(); smsYoz(sh, q);
+  });
+}
+/* Navbatga qo‘shish. items: [{pid, ism, phone, text, tur, kalit}]
+ * kalit — bir hodisaga bitta SMS (masalan "kelmadi:g1|2026-11-25:o7"): bir nechta qurilma bir xil narsani yuborsa ham takrorlanmaydi.
+ * Avtomatik SMS: bir odamga bir turdagi xabar 3 kunda ko‘pi bilan 1 marta. */
+function smsNavbatQoy(o, items, source) {
+  const c = smsCfg(o), sh = smsVaraq(), l = smsQatorlar(sh), now = Date.now(), lim3 = now - 3 * 864e5;
+  const band = {}, yaqin = {};
+  l.forEach(q => {
+    if (q.acc !== o.id || q.status === "cancelled" || q.status === "failed") return;
+    if (q.kalit) band[q.kalit] = 1;
+    if (q.source === "auto" && +q.createdAt >= lim3) yaqin[q.pid + ":" + q.tur] = 1;
+  });
+  let joy = c.limit - smsBugun(o.id, l).length;
+  const qator = [], natija = { qoshildi: 0, otdi: { limit: 0, raqam: 0, takror: 0 } };
+  (Array.isArray(items) ? items : []).slice(0, 300).forEach(it => {
+    const phone = smsRaqam(it.phone), text = String(it.text || "").trim().slice(0, 900), tur = String(it.tur || "boshqa").slice(0, 20);
+    const kalit = String(it.kalit || "").slice(0, 120), pid = String(it.pid || "").slice(0, 60);
+    if (!phone || !text) { natija.otdi.raqam++; return; }
+    if ((kalit && band[kalit]) || (source === "auto" && pid && yaqin[pid + ":" + tur])) { natija.otdi.takror++; return; }
+    if (joy <= 0) { natija.otdi.limit++; return; }
+    joy--; if (kalit) band[kalit] = 1; if (source === "auto" && pid) yaqin[pid + ":" + tur] = 1;
+    const q = { id: smsId(), acc: o.id, pid, phone, text, source, status: "queued", attempts: 0, error: "", createdAt: now, pickedAt: 0, sentAt: 0, deliveredAt: 0, updatedAt: now,
+      tur, kalit, ism: String(it.ism || "").slice(0, 80) };
+    qator.push(SMS_USTUNLAR.map(k => xavfsiz(String(q[k] === undefined ? "" : q[k]))));
+    natija.qoshildi++;
+  });
+  if (qator.length) {
+    const oxir = sh.getLastRow(); if (oxir + qator.length > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), qator.length + 100);
+    sh.getRange(oxir + 1, 1, qator.length, SMS_USTUNLAR.length).setValues(qator); CacheService.getScriptCache().put("smsq_" + o.id, "1", 21600);
+  }
+  return natija;
+}
+// Telefon tokeni bilan kirish (keshda 6 soat — har 30 soniyalik so‘rov jadvalni o‘qimasin)
+function smsQurilmaTop(dt) {
+  const tok = String(dt || ""); if (tok.length < 20) throw new Error("DEVICE");
+  const kesh = CacheService.getScriptCache(), k = kesh.get("smsdt_" + tok);
+  if (k) return JSON.parse(k);
+  const d = smsTellar().find(x => x.token === tok);
+  if (!d || d.status !== "active") throw new Error("DEVICE");
+  const o = qatorlar(varaq()).find(x => x.id === d.acc);
+  if (!o) throw new Error("DEVICE");
+  const r = { id: d.id, acc: d.acc };
+  kesh.put("smsdt_" + tok, JSON.stringify(r), 21600);
+  return r;
+}
+function smsKeshTozala(accId, tokenlar) {
+  const kesh = CacheService.getScriptCache();
+  kesh.remove("smscfg_" + accId); kesh.remove("smsq_" + accId);
+  (tokenlar || []).forEach(t => kesh.remove("smsdt_" + t));
+}
+// Markaz sozlamasi keshda (telefon har 30 soniyada so‘raydi)
+function smsCfgKesh(accId) {
+  const kesh = CacheService.getScriptCache(), k = kesh.get("smscfg_" + accId);
+  if (k) return JSON.parse(k);
+  const o = qatorlar(varaq()).find(x => x.id === accId);
+  if (!o) throw new Error("DEVICE");
+  const c = smsCfg(o), r = { from: c.from, to: c.to, gap: c.gap, limit: c.limit, biz: smsObuna(o), nomi: o.nomi };
+  kesh.put("smscfg_" + accId, JSON.stringify(r), 600);
+  return r;
+}
+
+/* Telefondagi ilova so‘rovlari. Tez yo‘l (navbat bo‘sh) — lock va jadvalsiz */
+function smsTez(d) {
+  if (d.action !== "smsPull") return null;
+  const x = smsQurilmaTop(d.dt), kesh = CacheService.getScriptCache();
+  kesh.put("smsping_" + x.acc, String(Date.now()), 21600);
+  const c = smsCfgKesh(x.acc), g = smsGlobal();
+  const out = { cfg: { from: c.from, to: c.to, gap: g.gap, limit: c.limit, off: g.off, biz: c.biz }, items: [] };
+  if (d.ping || g.off || !c.biz || kesh.get("smsq_" + x.acc) === "0") return out;
+  return null;
+}
+function smsQurilma(d) {
+  const a = d.action;
+  if (a === "smsPair") {
+    const code = String(d.code || "").replace(/\D/g, ""), kesh = CacheService.getScriptCache();
+    const accId = code.length === 6 ? kesh.get("smspair_" + code) : null;
+    if (!accId) throw new Error("Kod noto‘g‘ri yoki eskirgan. CRM’dan yangi kod oling");
+    const o = qatorlar(varaq()).find(x => x.id === accId); if (!o) throw new Error("Markaz topilmadi");
+    if (smsGlobal().off) throw new Error("Avto-SMS vaqtincha to‘xtatilgan. Keyinroq urinib ko‘ring");
+    kesh.remove("smspair_" + code);
+    const tsh = smsTelVaraq(), eski = [];
+    smsTellar(tsh).forEach(x => { if (x.acc === o.id && x.status === "active") { x.status = "off"; smsTelYoz(tsh, x); eski.push(x.token); } });
+    const t = { id: smsId(), acc: o.id, token: smsId() + smsId() + smsId(), model: String(d.model || "").slice(0, 60), sim: String(d.sim || "").slice(0, 60),
+      appVer: String(d.appVer || "").slice(0, 20), lastPing: Date.now(), status: "active", createdAt: Date.now() };
+    smsTelYoz(tsh, t); smsKeshTozala(o.id, eski);
+    kesh.put("smsping_" + o.id, String(Date.now()), 21600);
+    const c = smsCfg(o);
+    return { dt: t.token, name: o.nomi, shop: o.nomi, cfg: { from: c.from, to: c.to, gap: c.gap, limit: c.limit } };
+  }
+  const x = smsQurilmaTop(d.dt), kesh = CacheService.getScriptCache();
+  if (a === "smsUnpair") {
+    const tsh = smsTelVaraq(), t = smsTellar(tsh).find(y => y.id === x.id);
+    if (t) { t.status = "off"; smsTelYoz(tsh, t); smsKeshTozala(x.acc, [t.token]); }
+    return { ok: true };
+  }
+  if (a === "smsPull") {
+    kesh.put("smsping_" + x.acc, String(Date.now()), 21600);
+    const tsh = smsTelVaraq(), t = smsTellar(tsh).find(y => y.id === x.id);
+    if (!t || t.status !== "active") { smsKeshTozala(x.acc, [String(d.dt)]); throw new Error("DEVICE"); }
+    // jadvaldagi oxirgi aloqa vaqti 5 daqiqada bir yangilanadi (har so‘rovda emas)
+    if (Date.now() - (+t.lastPing || 0) > 5 * 60000 || (d.appVer && d.appVer !== t.appVer) || (d.sim && d.sim !== t.sim)) {
+      t.lastPing = Date.now(); if (d.sim) t.sim = String(d.sim).slice(0, 60); if (d.appVer) t.appVer = String(d.appVer).slice(0, 20); smsTelYoz(tsh, t);
+    }
+    const c = smsCfgKesh(x.acc), g = smsGlobal();
+    const out = { cfg: { from: c.from, to: c.to, gap: g.gap, limit: c.limit, off: g.off, biz: c.biz }, items: [] };
+    if (d.ping || g.off || !c.biz) return out;
+    const sh = smsVaraq(), l = smsQatorlar(sh);
+    smsQaytar(x.acc, l, sh);
+    const bugunSoni = smsBugun(x.acc, l).filter(q => q.status === "sent" || q.status === "delivered" || q.status === "sending").length;
+    const room = Math.min(5, c.limit - bugunSoni);
+    const navbat = l.filter(q => q.acc === x.acc && q.status === "queued").sort((p, q) => +p.createdAt - +q.createdAt);
+    if (room <= 0) out.limit = true;
+    else navbat.slice(0, room).forEach(q => {
+      q.status = "sending"; q.pickedAt = Date.now(); q.attempts = (+q.attempts || 0) + 1; q.updatedAt = Date.now(); smsYoz(sh, q);
+      out.items.push({ id: q.id, phone: q.phone, text: q.text });
+    });
+    const qoldi = l.some(q => q.acc === x.acc && (q.status === "queued" || q.status === "sending"));
+    kesh.put("smsq_" + x.acc, qoldi ? "1" : "0", 21600);
+    return out;
+  }
+  if (a === "smsReport") {
+    const st = String(d.status || "");
+    if (["sent", "delivered", "failed"].indexOf(st) < 0) throw new Error("Holat noto‘g‘ri");
+    const sh = smsVaraq(), q = smsQatorlar(sh).find(y => y.id === String(d.id || "") && y.acc === x.acc);
+    if (!q) return { ok: false };
+    if (q.status === "delivered" && st !== "delivered") return { ok: true };
+    q.status = st; q.updatedAt = Date.now();
+    if (st === "sent") { q.sentAt = Date.now(); q.error = ""; }
+    if (st === "delivered") { q.deliveredAt = Date.now(); if (!+q.sentAt) q.sentAt = q.deliveredAt; }
+    if (st === "failed") q.error = String(d.error || "Xato").slice(0, 200);
+    smsYoz(sh, q);
+    return { ok: true };
+  }
+  throw new Error("Noma’lum amal");
+}
+
+/* CRM so‘rovlari (markaz id + token bilan) */
+function smsAmal(sh, d) {
+  const o = markazTop(sh, d);
+  if (!o) return { ok: false, kod: "topilmadi", xato: "Markaz tizimda topilmadi." };
+  const a = d.amal, g = smsGlobal();
+  if (a === "smsList") {
+    const c = smsCfg(o), l = smsQatorlar().filter(q => q.acc === o.id).sort((x, y) => +y.createdAt - +x.createdAt), td = smsBugun(o.id, l);
+    return { ok: true, off: g.off, obuna: smsObuna(o), device: devPub(smsTelefon(o.id)), cfg: c, ilova: SMS_ILOVA,
+      today: { all: td.length, sent: td.filter(q => q.status === "sent" || q.status === "delivered").length, failed: td.filter(q => q.status === "failed").length,
+        queued: td.filter(q => q.status === "queued" || q.status === "sending").length },
+      items: l.slice(0, 100).map(smsPub) };
+  }
+  if (a === "smsSet") {
+    const c = smsCfg(o), n = d.cfg || {}, q = Object.assign({}, c.q);
+    if (n.q) SMS_TURLAR.forEach(k => { if (n.q[k] !== undefined) q[k] = !!n.q[k]; });
+    const hm = v => /^\d{2}:\d{2}$/.test(String(v || ""));
+    const y = { auto: n.auto !== undefined ? !!n.auto : c.auto, agreed: n.agreed !== undefined ? !!n.agreed : c.agreed,
+      limit: n.limit !== undefined ? Math.min(150, Math.max(10, +n.limit || c.limit)) : c.limit, from: hm(n.from) ? n.from : c.from, to: hm(n.to) ? n.to : c.to, q };
+    o.smsCfg = JSON.stringify(y); yoz(sh, o); smsKeshTozala(o.id);
+    return { ok: true, cfg: smsCfg(o) };
+  }
+  if (a === "smsPairCode") {
+    if (g.off) return { ok: false, xato: "Avto-SMS vaqtincha to‘xtatilgan. Keyinroq urinib ko‘ring." };
+    if (!smsCfg(o).agreed) return { ok: false, xato: "Avval shartlarga rozilik bering." };
+    const kesh = CacheService.getScriptCache();
+    let code = ""; for (let i = 0; i < 6; i++) { code = String(100000 + Math.floor(Math.random() * 900000)); if (!kesh.get("smspair_" + code)) break; }
+    kesh.put("smspair_" + code, o.id, 600);
+    return { ok: true, code, until: Date.now() + 600000 };
+  }
+  if (a === "smsEnqueue") {
+    if (g.off) return { ok: false, xato: "Avto-SMS vaqtincha to‘xtatilgan." };
+    if (!smsObuna(o)) return { ok: false, xato: "Obuna muddati tugagan — SMS yuborilmaydi." };
+    if (!smsTelefon(o.id)) return { ok: false, kod: "telefon", xato: "Avval telefonni ulang: Xabarlar → Avto-SMS." };
+    const source = d.source === "auto" ? "auto" : "manual";
+    if (source === "auto") { const c = smsCfg(o); if (!c.auto || !c.agreed) return { ok: true, qoshildi: 0, otdi: {}, ochiq: false }; }
+    return Object.assign({ ok: true }, smsNavbatQoy(o, d.items, source));
+  }
+  if (a === "smsCancel") {
+    const ssh = smsVaraq(), q = smsQatorlar(ssh).find(y => y.id === String(d.sid || "") && y.acc === o.id);
+    if (!q) return { ok: false, xato: "Topilmadi." };
+    if (q.status !== "queued") return { ok: false, xato: "Bu SMS allaqachon telefonga uzatilgan." };
+    q.status = "cancelled"; q.updatedAt = Date.now(); smsYoz(ssh, q);
+    return { ok: true };
+  }
+  if (a === "smsUnpair") {
+    const tsh = smsTelVaraq(), eski = [];
+    smsTellar(tsh).forEach(t => { if (t.acc === o.id && t.status === "active") { t.status = "off"; smsTelYoz(tsh, t); eski.push(t.token); } });
+    const ssh = smsVaraq();
+    smsQatorlar(ssh).forEach(q => { if (q.acc === o.id && (q.status === "queued" || q.status === "sending")) { q.status = "cancelled"; q.updatedAt = Date.now(); smsYoz(ssh, q); } });
+    smsKeshTozala(o.id, eski);
+    return { ok: true };
+  }
+  return { ok: false, xato: "Noma’lum amal." };
+}
+
+/* Har kecha 03:00 (sozlash() qo‘yadi): 30 kundan eski, yakunlangan SMS'lar o‘chiriladi — navbat varag‘i kichik va tez qoladi */
+function smsTozalash() {
+  const lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    const sh = smsVaraq(), l = smsQatorlar(sh), lim = Date.now() - 30 * 864e5;
+    const qol = l.filter(q => +q.createdAt >= lim || q.status === "queued" || q.status === "sending");
+    if (qol.length === l.length) return;
+    const n = sh.getLastRow() - 1;
+    if (n > 0) sh.getRange(2, 1, n, SMS_USTUNLAR.length).clearContent();
+    if (qol.length) sh.getRange(2, 1, qol.length, SMS_USTUNLAR.length).setValues(qol.map(q => SMS_USTUNLAR.map(k => xavfsiz(String(q[k] === undefined ? "" : q[k])))));
+    qatorlar(varaq()).forEach(o => CacheService.getScriptCache().remove("smsq_" + o.id));
+  } finally { lock.releaseLock(); }
+}
+
+/* Admin: telefonlar va bugungi statistika */
+function smsAdmin(d) {
+  if (d.amal === "admin_sms_sozla") {
+    const g = smsGlobal(), n = d.cfg || {};
+    const y = { off: n.off !== undefined ? !!n.off : g.off, defLimit: n.defLimit !== undefined ? Math.min(150, Math.max(10, +n.defLimit || g.defLimit)) : g.defLimit,
+      gap: n.gap !== undefined ? Math.min(300, Math.max(5, +n.gap || g.gap)) : g.gap };
+    PropertiesService.getScriptProperties().setProperty("SMS_CFG", JSON.stringify(y));
+    qatorlar(varaq()).forEach(o => CacheService.getScriptCache().remove("smscfg_" + o.id));
+    return { ok: true, global: smsGlobal() };
+  }
+  const markazlar = {}; qatorlar(varaq()).forEach(o => { markazlar[o.id] = o; });
+  const l = smsQatorlar(), t0 = smsKunBoshi(), stat = {};
+  l.forEach(q => {
+    if (+q.createdAt < t0 || q.status === "cancelled") return;
+    const s = stat[q.acc] = stat[q.acc] || { jami: 0, yuborildi: 0, xato: 0, navbat: 0 };
+    s.jami++; if (q.status === "sent" || q.status === "delivered") s.yuborildi++; else if (q.status === "failed") s.xato++; else s.navbat++;
+  });
+  const telefonlar = smsTellar().filter(t => t.status === "active").map(t => {
+    const m = markazlar[t.acc] || {}, s = stat[t.acc] || { jami: 0, yuborildi: 0, xato: 0, navbat: 0 }, c = m.id ? smsCfg(m) : {};
+    return Object.assign({ markazId: t.acc, markaz: m.nomi || t.acc, auto: !!c.auto, limit: c.limit || 0 }, devPub(t), s);
+  }).sort((a, b) => b.online - a.online || b.jami - a.jami);
+  const jami = { jami: 0, yuborildi: 0, xato: 0, navbat: 0 };
+  Object.keys(stat).forEach(k => Object.keys(jami).forEach(f => { jami[f] += stat[k][f]; }));
+  return { ok: true, global: smsGlobal(), telefonlar, bugun: jami, ilova: SMS_ILOVA };
 }

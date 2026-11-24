@@ -45,6 +45,14 @@ Markaz ma’lumotlari Google Drive'ingizdagi **«O‘quv Markaz CRM — ma’lum
 
 Papka va fayllarni o‘chirmang, nomini o‘zgartirmang. Papkani hech kimga ulashmang: unda markazlarning o‘quvchi va to‘lov ma’lumotlari bor.
 
+## 7. Avto-SMS (2.0 dan)
+SMS'lar markazning o‘z telefonidagi SIM kartadan ketadi: CRM navbatga qo‘yadi, telefondagi «O‘quv Markaz SMS» ilovasi navbatni olib yuboradi.
+1. Yangi `Code.gs` ni qo‘ying, saqlang.
+2. **sozlash** ni **Run** qiling — jadvalda **SmsDevices** va **SmsQueue** varaqlari paydo bo‘ladi, tungi tozalash taymeri (har kecha 03:00, 30 kundan eski SMS yozuvlari) qo‘yiladi.
+3. **Deploy → Manage deployments → qalamcha → New version → Deploy.**
+
+Admin saytdagi «Avto-SMS» bo‘limida: ulangan telefonlar, bugungi statistika, «Hamma uchun o‘chirish», standart limit va SMS oralig‘i.
+
 ## Keyinchalik
 - Jadvalda barcha markazlar ko‘rinadi. Qatorlarni qo‘lda o‘zgartirmang: admin sayt orqali boshqaring.
 - `token` ustuni markazning maxfiy kaliti. Uni hech kimga bermang.
