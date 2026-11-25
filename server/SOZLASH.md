@@ -50,3 +50,19 @@ Papka va fayllarni o‘chirmang, nomini o‘zgartirmang. Papkani hech kimga ulas
 - `token` ustuni markazning maxfiy kaliti. Uni hech kimga bermang.
 - Server kodini yangilash kerak bo‘lsa: kodni almashtirib saqlang → **Deploy → Manage deployments → qalam belgisi → Version: New version → Deploy**. Manzil o‘zgarmaydi.
 - Admin parolni almashtirish: 3-qadamni yangi parol bilan qaytaring.
+
+## 7. Avto-SMS (1.5.0 dan)
+Markaz o‘z telefonidagi SIM kartadan SMS yuboradi: CRM navbatga qo‘yadi, telefondagi «O‘quv Markaz SMS» ilovasi navbatni olib yuboradi. Pullik SMS-shlyuz kerak emas.
+1. Yangi `Code.gs` ni qo‘ying va saqlang.
+2. **sozlash** ni **Run** qiling. Jadvalda **SmsDevices**, **SmsQueue**, **SmsSnap** varaqlari paydo bo‘ladi va **smsAvto** taymeri (har soatda) yoqiladi. Yangi ruxsat so‘ramaydi.
+3. **Deploy → Manage deployments → qalam → Version: New version → Deploy.**
+4. Tekshirish: **Triggers** (soat belgisi) bo‘limida `tolovlarniTekshir` (10 daqiqa) va `smsAvto` (1 soat) turibdi.
+
+Qoidalar (kodda o‘zgartiriladi):
+- `SMS_AVTO_SOAT` — avtomatik eslatmalar har kuni shu vaqtdan keyin (standart 10:00, ish vaqti boshlanishi kechroq bo‘lsa — o‘sha vaqtdan).
+- `SMS_KUNLAR` — CRM’da tanlash mumkin bo‘lgan kunlar (to‘lov muddati o‘tganiga 1, 3, 7, 14, 30 kun).
+- Bir odamga 3 kunda ko‘pi bilan 1 ta SMS. «Avto-SMS yuborilmasin» belgilangan o‘quvchiga avtomatik SMS ketmaydi.
+- CRM bir haftadan beri ochilmagan markazga avtomatik SMS yuborilmaydi (qarzlar ro‘yxati eskirgan bo‘ladi).
+
+Admin saytdagi **Avto-SMS** bo‘limida: hamma uchun o‘chirish, standart kunlik limit, SMS oralig‘i (soniya) va qaysi tariflarda ishlashi.
+Varaqlarni qo‘lda o‘zgartirmang. `SmsDevices` dagi `token` — telefonning maxfiy kaliti.
