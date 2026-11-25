@@ -1,0 +1,51 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// Versiya bitta joyda: android-sms/version.json (workflow uni repo ildiziga sms-version.json qilib ko‘chiradi)
+def ver = new groovy.json.JsonSlurper().parse(file("../version.json"))
+def ks = System.getenv("SMS_KEYSTORE_FILE")
+
+android {
+    namespace 'uz.vectorstudio.oquvsms'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "uz.vectorstudio.oquvmarkaz.sms"
+        minSdk 21
+        targetSdk 34
+        versionCode ver.code as int
+        versionName ver.name as String
+        buildConfigField "String", "SERVER", '"https://script.google.com/macros/s/AKfycbxZshxNSq_BtBGPIpcSw9VXBvwhGCeLPrf4T0P6W2O8w_sPSbLNEAPHC2O91DiuXwAE/exec"'
+        buildConfigField "String", "VERSION_URL", '"https://xusniddin-del.github.io/oquv-markaz-crm/sms-version.json"'
+        buildConfigField "String", "DOWNLOAD_URL", '"https://xusniddin-del.github.io/oquv-markaz-crm/OquvMarkaz-SMS.apk"'
+    }
+
+    buildFeatures { buildConfig true }
+
+    signingConfigs {
+        release {
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("SMS_KEYSTORE_PASS")
+                keyAlias "oquvsms"
+                keyPassword System.getenv("SMS_KEYSTORE_PASS")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (ks) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions { jvmTarget = '1.8' }
+    lint { abortOnError false; checkReleaseBuilds false }
+}

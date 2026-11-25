@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">O‘quv Markaz SMS</string>
+    <string name="pair_title">Telefonni ulash</string>
+    <string name="pair_desc">CRM’da «Avto-SMS» bo‘limini oching, «Ulash kodini olish»ni bosing va chiqqan 6 xonali kodni shu yerga yozing.</string>
+    <string name="pair_hint">6 xonali kod</string>
+    <string name="pair_btn">Ulash</string>
+    <string name="pair_wait">Ulanmoqda…</string>
+    <string name="err_code">Kod 6 ta raqamdan iborat bo‘lsin</string>
+    <string name="err_net">Internet yo‘q yoki server javob bermadi</string>
+    <string name="safe_title">🔒 Xavfsiz va shaffof</string>
+    <string name="safe_1">SMS’laringizni o‘qimaydi</string>
+    <string name="safe_2">Qo‘ng‘iroq, kontakt, rasm va fayllarga kirmaydi</string>
+    <string name="safe_3">Bank kartasi, hisob va pulga hech qanday aloqasi yo‘q</string>
+    <string name="safe_4">Faqat siz CRM’da belgilagan odamlarga yuboradi</string>
+    <string name="safe_5">Har bir SMS CRM’dagi ro‘yxatda ko‘rinadi</string>
+    <string name="safe_6">Rasmiy ilova, Vector Studio imzosi bilan</string>
+    <string name="on">YONIQ</string>
+    <string name="off">O‘CHIQ</string>
+    <string name="tap_toggle">Yoqish yoki o‘chirish uchun bosing</string>
+    <string name="today_sent">Bugun yuborildi</string>
+    <string name="sim">SIM karta</string>
+    <string name="sim_default">Asosiy SIM</string>
+    <string name="last_sms">Oxirgi SMS’lar</string>
+    <string name="no_sms">Hali SMS yo‘q</string>
+    <string name="st_sending">Yuborilmoqda</string>
+    <string name="st_sent">Yuborildi</string>
+    <string name="st_delivered">Yetkazildi</string>
+    <string name="st_failed">Xato</string>
+    <string name="work_hours">Ish vaqti: %1$s–%2$s</string>
+    <string name="outside_hours">Hozir ish vaqtidan tashqari — navbatdagi SMS’lar ish vaqtida ketadi</string>
+    <string name="limit_reached">Bugungi limit tugadi (%1$d ta). Qolgani ertaga ketadi.</string>
+    <string name="server_off">To‘xtatilgan: %1$s</string>
+    <string name="stopped_errors">Ketma-ket 3 ta xato bo‘lgani uchun to‘xtatildi. Balans yoki SIM’ni tekshiring, keyin qayta yoqing.</string>
+    <string name="perm_sms">SMS yuborish uchun ruxsat bering</string>
+    <string name="perm_btn">Ruxsat berish</string>
+    <string name="settings">Sozlamalar</string>
+    <string name="back">‹ Orqaga</string>
+    <string name="lang">Til</string>
+    <string name="lang_uz">O‘zbekcha</string>
+    <string name="lang_ru">Русский</string>
+    <string name="sim_choose">SIM tanlash</string>
+    <string name="sim_one">Telefonda bitta SIM bor</string>
+    <string name="sim_need_perm">Ikkinchi SIM’ni ko‘rish uchun ruxsat bering</string>
+    <string name="hours_title">Ish vaqti</string>
+    <string name="hours_note">CRM → Avto-SMS → Sozlamalarda o‘zgartiriladi</string>
+    <string name="battery">Batareya tejash</string>
+    <string name="battery_btn">Yo‘riqnoma</string>
+    <string name="unpair">Telefonni uzish</string>
+    <string name="unpair_confirm">Telefon CRM’dan uziladi. Qayta ulash uchun CRM’dan yangi kod olish kerak bo‘ladi.</string>
+    <string name="yes">Ha</string>
+    <string name="cancel">Bekor qilish</string>
+    <string name="version">Versiya %1$s</string>
+    <string name="check_update">Yangilanishni tekshirish</string>
+    <string name="up_to_date">Eng so‘nggi versiya o‘rnatilgan</string>
+    <string name="update_title">Yangi versiya chiqdi</string>
+    <string name="update_btn">Yangilash</string>
+    <string name="update_text">Versiya %1$s. Sozlamalar va ulanish saqlanadi.</string>
+    <string name="notif_running">Ishlamoqda · bugun %1$d ta SMS</string>
+    <string name="notif_outside">Ish vaqtidan tashqari · bugun %1$d ta SMS</string>
+    <string name="notif_stop_title">SMS yuborish to‘xtadi</string>
+    <string name="notif_stop_text">Balans yoki SIM’ni tekshiring, keyin ilovada qayta yoqing.</string>
+    <string name="ch_service">Ishlash holati</string>
+    <string name="ch_alerts">Ogohlantirishlar</string>
+    <string name="unpaired_msg">Telefon CRM’dan uzilgan. Qayta ulang.</string>
+    <string name="guide_title">Ilova to‘xtab qolmasligi uchun</string>
+    <string name="guide_common">Telefon batareyani tejash uchun fondagi ilovalarni to‘xtatib qo‘yadi. Bir marta sozlang:</string>
+    <string name="guide_xiaomi">1. Sozlamalar → Ilovalar → O‘quv Markaz SMS
+2. «Avtomatik ishga tushirish» — yoqing
+3. «Batareya tejash» → «Cheklovlar yo‘q»
+4. Oxirgi ilovalar ro‘yxatida ilovani pastga torting va qulf belgisini bosing</string>
+    <string name="guide_samsung">1. Sozlamalar → Ilovalar → O‘quv Markaz SMS → Batareya
+2. «Cheklanmagan»ni tanlang
+3. Sozlamalar → Batareya → Fon cheklovlari: ilovani «Hech qachon uxlamaydigan ilovalar»ga qo‘shing</string>
+    <string name="guide_huawei">1. Sozlamalar → Batareya → Ilovalarni ishga tushirish
+2. O‘quv Markaz SMS — «Qo‘lda boshqarish»
+3. Avto-ishga tushirish, ikkilamchi ishga tushirish va fonda ishlash — hammasini yoqing</string>
+    <string name="guide_other">1. Sozlamalar → Ilovalar → O‘quv Markaz SMS → Batareya
+2. «Cheklovsiz» yoki «Optimallashtirmaslik»ni tanlang</string>
+    <string name="guide_charge">Maslahat: SMS yuboradigan telefonni zaryadda va Wi-Fi’da qoldiring.</string>
+    <string name="guide_open">Sozlamalarni ochish</string>
+    <string name="guide_done">Tushunarli</string>
+    <string name="center">Markaz: %1$s</string>
+    <string name="guide_limit">Telefon «ilova juda ko‘p SMS yubormoqda» deb so‘rasa: «Har doim ruxsat berish»ni belgilab, «Ruxsat berish»ni bosing.</string>
+</resources>
