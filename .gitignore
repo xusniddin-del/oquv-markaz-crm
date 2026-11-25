@@ -5,3 +5,11 @@ __pycache__/
 *generator*
 kalit*.json
 *.pem
+
+# Android ilova yig‘ish fayllari va imzo kaliti
+android-sms/.gradle/
+android-sms/build/
+android-sms/app/build/
+android-sms/local.properties
+*.jks
+*.keystore
