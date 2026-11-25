@@ -1,5 +1,17 @@
 # Versiyalar tarixi
 
+## 1.5.0 — 2026-11-26
+
+Avto-SMS: eslatmalar markaz telefonidagi SIM kartadan avtomatik ketadi.
+
+- Yangi «Avto-SMS» bo‘limi: rozilik, 3 qadam (ilovani yuklab olish — kompyuterda QR kod, ruxsat berish, 6 xonali ulash kodi), telefon holati (model, onlayn, SIM), bugungi statistika, sozlamalar va 100 tagacha tarix.
+- Avtomatik qarz eslatmasi: har kuni 10:00 dan keyin, muddati tanlangan kunlarga (1, 3, 7, 14, 30) o‘tganlarga; bir odamga 3 kunda ko‘pi bilan 1 ta. Kunlik limit, ish vaqti va matn sozlanadi.
+- Xabarlar oynasida birinchi variant: «Avtomatik yuborish (telefon orqali)». Nusxalash va Telegram o‘zgarmadi.
+- O‘quvchi kartasida «Avto-SMS yuborilmasin» tugmasi.
+- Navbatdagi SMS’ni bekor qilish, telefonni uzish; telefondagi ilova eski bo‘lsa — «Yangi versiya chiqdi» kartasi.
+- Tarifda bo‘lmasa bo‘lim qulflangan; iPhone’da «faqat Android telefon orqali ishlaydi».
+- Server yangilanishi shart: SOZLASH.md, 7-bo‘lim.
+
 ## 1.4.1 — 2026-11-22
 
 - Eski versiyada ro‘yxatdan o‘tgan va ma’lumoti hali serverga yuklanmagan markazga boshqa qurilmadan kirilsa, «Login yoki parol noto‘g‘ri» o‘rniga nima qilish kerakligi yoziladi.

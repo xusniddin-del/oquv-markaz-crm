@@ -68,6 +68,7 @@ const BOLIMLAR = {
   davomat:      { nom: "Davomat", ic: "check", guruh: "Kundalik ishlar", tavsif: "Keldi, kechikdi, kelmadi", render: renderDavomat },
   diqqat:       { nom: "Diqqat", ic: "alert", guruh: "Kundalik ishlar", tavsif: "Hal qilinishi kerak bo‘lganlar", render: renderDiqqat, nishon: () => diqqatlar().length },
   xabarlar:     { nom: "Xabarlar", ic: "message", guruh: "Kundalik ishlar", tavsif: `${katta(T.otaOna)}ga tayyor matn`, render: renderXabarlar },
+  avtosms:      { nom: "Avto-SMS", ic: "send", guruh: "Kundalik ishlar", tavsif: "Telefoningiz SIM kartasidan", render: renderAvtoSms },
   sorovlar:     { nom: "So‘rovlar", ic: "phone", guruh: "Kundalik ishlar", tavsif: "Murojaat va shikoyatlar", render: renderSorovlar, nishon: () => SR().filter(x => x.holat === "yangi").length },
   lidlar:       { nom: "Lidlar", ic: "funnel", guruh: "Sotuv", tavsif: "Sotuv voronkasi", render: renderLidlar },
   kurslar:      { nom: "Kurslar", ic: "teacher", guruh: "O‘quv jarayoni", tavsif: "Kurs va uning guruhlari", render: renderKurslar },
