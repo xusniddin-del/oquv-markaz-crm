@@ -229,8 +229,8 @@ function chiz() {
       <div class="plitka" style="cursor:default"><b>${son(oyTushum(b ? oyQosh(b.slice(0, 8) + "01", -1).slice(0, 7) : ""))}</b><span>O‘tgan oy tushum, so‘m</span></div>
     </div>
     ${H.tolovYoqilgan ? "" : `<p class="xato" style="font-weight:500">Online to‘lov ulanmagan: Apps Script’da TEZCHECK_KALIT qo‘yilmagan. Markazlar faqat sizga murojaat qilib to‘lay oladi.</p>`}
-    <div class="chiplar" role="tablist">${[["markazlar", "Markazlar"], ["tolovlar", "To‘lovlar"]].map(([k, n]) => `<button class="chip" data-a="korinish" data-k="${k}" aria-pressed="${H.korinish === k}">${n}</button>`).join("")}</div>
-    ${H.korinish === "tolovlar" ? tolovlarJadval() : `
+    <div class="chiplar" role="tablist">${[["markazlar", "Markazlar"], ["tolovlar", "To‘lovlar"], ["sms", "Avto-SMS"]].map(([k, n]) => `<button class="chip" data-a="korinish" data-k="${k}" aria-pressed="${H.korinish === k}">${n}</button>`).join("")}</div>
+    ${H.korinish === "sms" ? smsKorinish() : H.korinish === "tolovlar" ? tolovlarJadval() : `
     ${H.korinish === "tolovlar" ? "" : `<div class="asboblar"><label class="qidiruv">${ic("qidir")}<span hidden>Qidiruv</span><input id="qidiruv" type="search" placeholder="Nomi, telefon, rahbar yoki ID" value="${esc(H.qidiruv)}" autocomplete="off"></label>
       <div class="chiplar">${FILTRLAR.map(([k, n]) => `<button class="chip" data-filtr="${k}" aria-pressed="${H.filtr === k}">${n} <span class="son">${sana(k)}</span></button>`).join("")}</div></div>`}
     <section class="karta">${royxat.length ? `
@@ -262,6 +262,40 @@ function tolovlarJadval() {
     <div class="jadval-q" style="display:block"><table><thead><tr><th>Sana</th><th>Markaz</th><th>Tarif</th><th style="text-align:right">Summa</th><th>Usul</th><th>Holat</th></tr></thead>
     <tbody>${l.map(t => tolovQator(t)).join("")}</tbody></table></div>`
     : `<div class="bosh-holat">Hali to‘lov yo‘q. Markaz CRM’da tarif tanlab to‘lasa yoki siz naqd to‘lov qo‘shsangiz, shu yerda ko‘rinadi.</div>`}</section>`;
+}
+
+/* ---------- Avto-SMS: ulangan telefonlar va umumiy sozlamalar ---------- */
+function smsKorinish() {
+  const s = H.sms;
+  if (!s) { if (!H.smsYuk) smsYukla(); return `<section class="karta"><div class="bosh-holat">${H.smsXato ? esc(H.smsXato) : "Yuklanmoqda…"}</div></section>`; }
+  const g = s.global, j = s.jami, q = s.qurilmalar.slice().sort((a, c) => (c.online - a.online) || (c.bugun - a.bugun));
+  return `<div class="plitkalar">
+      <div class="plitka" style="cursor:default"><b>${son(q.length)}</b><span>Ulangan telefon</span></div>
+      <div class="plitka ok" style="cursor:default"><b>${son(j.onlayn)}</b><span>Hozir onlayn</span></div>
+      <div class="plitka ok" style="cursor:default"><b>${son(j.bugun)}</b><span>Bugun yuborildi</span></div>
+      <div class="plitka" style="cursor:default"><b>${son(j.navbatda)}</b><span>Navbatda</span></div>
+      <div class="plitka bad" style="cursor:default"><b>${son(j.xato)}</b><span>Bugun xato</span></div></div>
+    ${g.off ? `<p class="xato">Avto-SMS hamma markazlar uchun o‘chirilgan. Telefonlar SMS yubormaydi.</p>` : ""}
+    <section class="karta">${q.length ? `<div class="jadval-q" style="display:block"><table><thead><tr><th>Markaz</th><th>Telefon</th><th>SIM</th><th>Holat</th><th>Versiya</th><th style="text-align:right">Bugun</th><th style="text-align:right">Xato</th><th style="text-align:right">Navbatda</th></tr></thead>
+      <tbody>${q.map(x => `<tr data-id="${esc(x.acc)}" tabindex="0"><td class="nom"><b>${esc(x.markaz)}</b><span>${esc(x.acc)}${x.auto ? " · avtomatik eslatma yoqilgan" : ""}</span></td>
+        <td>${esc(x.model || "—")}</td><td>${esc(x.sim || "—")}</td>
+        <td>${x.online ? `<span class="pill ok">Onlayn</span>` : `<span class="pill bad">Onlayn emas</span><div class="muted sm">${x.lastPing ? vaqtM(x.lastPing) : "—"}</div>`}</td>
+        <td>${esc(x.appVer || "—")}</td><td class="raq">${son(x.bugun)}<div class="muted sm">limit ${son(x.limit)}</div></td><td class="raq" style="${x.xato ? "color:var(--bad)" : ""}">${son(x.xato)}</td><td class="raq">${son(x.navbatda)}</td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="bosh-holat">Hali birorta markaz telefon ulamagan. Markaz CRM’da «Avto-SMS» bo‘limidan ulaydi.</div>`}</section>
+    <section class="karta" style="padding:16px;display:grid;gap:14px;max-width:640px"><h2 style="margin:0;font-size:17px">Umumiy sozlamalar</h2>
+      <label style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" id="sms-off" ${g.off ? "checked" : ""} style="width:20px;height:20px"> Hamma uchun o‘chirish</label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+        <label style="display:grid;gap:6px"><span class="muted sm">Standart kunlik limit (yangi markazlar)</span><input id="sms-limit" type="number" min="10" max="150" value="${+g.limit || 50}"></label>
+        <label style="display:grid;gap:6px"><span class="muted sm">SMS oralig‘i, soniya</span><input id="sms-gap" type="number" min="5" max="300" value="${+g.gap || 25}"></label></div>
+      <div style="display:grid;gap:6px"><span class="muted sm">Qaysi tariflarda ishlaydi (bepul sinovda hamma uchun ochiq)</span>
+        <div class="chiplar">${(s.tariflar || H.tariflar).map(t => `<label class="chip"><input type="checkbox" name="sms-tarif" value="${esc(t.k)}" ${g.tariflar.includes(t.k) ? "checked" : ""}> ${esc(t.nom)}</label>`).join("")}</div></div>
+      <div><button class="btn asosiy" data-a="sms-saqla">Saqlash</button> <button class="btn" data-a="sms-yangila">${ic("yangila")} Yangilash</button></div></section>`;
+}
+async function smsYukla(amal = "admin_sms", d = {}) {
+  H.smsYuk = true;
+  try { const j = await sorov(amal, d); if (!j.ok) throw new Error(j.xato || "Xato"); H.sms = j; H.smsXato = ""; if (amal !== "admin_sms") toast("Saqlandi"); }
+  catch (e) { H.smsXato = /Noma.lum amal/.test(e.message) ? "Server eski versiyada: Code.gs ni yangilab, qayta Deploy qiling (SOZLASH.md, 7-bo‘lim)." : e.message; }
+  H.smsYuk = false; if (H.korinish === "sms") chiz();
 }
 
 const vaqtM = ms => { const d = new Date(+ms), p = n => String(n).padStart(2, "0"), s = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
@@ -427,7 +461,10 @@ const AMAL = {
   "xabar-ochir": () => ozgar({ xabar: "" }, "Xabar olib tashlandi"),
   izoh: () => ozgar({ izoh: $("#p-izoh").value.trim() }, "Izoh saqlandi"),
   ochir: () => { H.tasdiq = "ochir"; chiz(); },
-  korinish: el => { H.korinish = el.dataset.k; chiz(); },
+  korinish: el => { H.korinish = el.dataset.k; if (el.dataset.k === "sms") H.sms = null; chiz(); },
+  "sms-yangila": () => { H.sms = null; chiz(); },
+  "sms-saqla": () => smsYukla("admin_sms_set", { global: { off: $("#sms-off").checked, limit: +$("#sms-limit").value, gap: +$("#sms-gap").value,
+    tariflar: [...document.querySelectorAll('input[name="sms-tarif"]:checked')].map(x => x.value) } }),
   qongiroq: () => { H.qongiroq = !H.qongiroq; chiz(); if (H.qongiroq) bildYangila(); },
   suhbat: el => { H.qongiroq = false; H.tanlangan = el.dataset.m; H.tasdiq = ""; H.naqd = null; chatOch(el.dataset.m); },
   "chat-yoz": async el => {

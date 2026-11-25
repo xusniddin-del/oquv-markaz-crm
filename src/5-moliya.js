@@ -147,7 +147,11 @@ function renderSozlamalar() {
         <div><span>Oxirgi tekshiruv</span><b>${oxirgi ? `${sanaMatn(sanaStr(oxirgi))}, ${pad2(oxirgi.getHours())}:${pad2(oxirgi.getMinutes())}` : "—"}</b></div></div>
       <p class="muted sm" style="margin:0">Savollar bo‘lsa: ${esc(SOZLAMALAR.sotuvchi.nom)}${sotuvchiAloqa() ? " · " + sotuvchiAloqa() : ""}.</p>
       <div class="amal-qator"><button class="btn btn-soft" data-act="obuna-yangila">${icon("refresh", 18)} Holatni yangilash</button></div></section>
-      <section class="card forma" style="max-width:860px"><div class="card-h" style="margin:0"><h2>Tarif tanlash va to‘lash</h2></div>${tarifTanlov()}</section>`;
+      <section class="card forma" style="max-width:860px"><div class="card-h" style="margin:0"><h2>Tarif tanlash va to‘lash</h2></div>${tarifTanlov()}</section>
+      <section class="card forma" style="max-width:860px"><div class="card-h" style="margin:0"><h2>Ko‘p so‘raladigan savollar</h2></div>
+        <details><summary><b>Avto-SMS nima?</b></summary><p class="muted" style="margin:8px 0 0">Qarz eslatmalari va boshqa xabarlar markazingiz telefonidagi o‘z SIM kartangizdan avtomatik ketadi. Pullik SMS xizmati kerak emas: SMS operator tarifingiz bo‘yicha hisoblanadi.</p></details>
+        <details><summary><b>Ilova xavfsizmi?</b></summary><p class="muted" style="margin:8px 0 0">Ha. «O‘quv Markaz SMS» ilovasi SMS’laringizni o‘qimaydi, qo‘ng‘iroq, kontakt, rasm va fayllarga kirmaydi, bank kartasi va pulga hech qanday aloqasi yo‘q. Faqat siz CRM’da belgilagan odamlarga yuboradi va har bir SMS Avto-SMS bo‘limidagi ro‘yxatda ko‘rinadi. Ilova Vector Studio imzosi bilan chiqadi. Play Market’da bo‘lmagani uchun telefon «Play Protect» ogohlantirishini chiqarishi mumkin: «Batafsil» → «Baribir o‘rnatish».</p></details>
+        <details><summary><b>iPhone’da ishlaydimi?</b></summary><p class="muted" style="margin:8px 0 0">SMS yuboradigan telefon Android bo‘lishi kerak. CRM’ni esa istalgan qurilmadan, jumladan iPhone’dan boshqarasiz.</p></details></section>`;
   }
 
   if (t === "xodimlar") return h + bolimBosh("Har bir xodim o‘z logini va 8 xonali paroli bilan kiradi. Login avtomatik tuziladi, parolni siz berasiz. Lavozimiga qarab faqat ruxsat berilgan bo‘limlarni ko‘radi.", `<button class="btn btn-primary" data-act="xodim-yangi">${icon("plus", 18)} Xodim qo‘shish</button>`) + `
