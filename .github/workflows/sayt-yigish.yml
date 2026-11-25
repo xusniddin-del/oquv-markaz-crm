@@ -1,0 +1,35 @@
+# src/ o‘zgarganda index.html ni avtomatik qayta yig‘adi (python3 build.py).
+# Bir nechta PR alohida merge qilinganda ham sayt har doim eng so‘nggi manbadan yig‘ilgan bo‘ladi.
+name: Saytni yig‘ish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "build.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sayt-yigish
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: index.html ni yig‘ish
+        run: python3 build.py
+      - name: O‘zgargan bo‘lsa — saqlash
+        run: |
+          git add index.html
+          if git diff --cached --quiet; then echo "index.html o‘zgarmagan"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "index.html qayta yig‘ildi [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main

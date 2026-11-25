@@ -27,6 +27,7 @@ const Server = {
       tarif: j.tarif || "", kutilayotgan: +j.kutilayotgan || 0, tolovYoqilgan: !!j.tolovYoqilgan });
     if (Array.isArray(j.tariflar) && j.tariflar.length) L.tariflar = j.tariflar;
     if (Array.isArray(j.oylar) && j.oylar.length) L.oylar = j.oylar;
+    if (Array.isArray(j.smsTariflar)) L.smsTariflar = j.smsTariflar;
     if (j.bugun) this.bugun = j.bugun;
     Ombor.sozYoz();
   },
@@ -158,6 +159,7 @@ function tarifTanlov() {
       <span class="t-narx">${pulS(t.narx)}<small> / oy</small></span>
       <span class="t-shart">${t.limit ? `${t.limit} tagacha ${T.oquvchi}` : `Cheksiz ${T.oquvchilar}`}</span>
       <span class="t-shart">${t.filial ? "Bir nechta filial" : "Bitta filial"} · barcha bo‘limlar</span>
+      <span class="t-shart">${(L.smsTariflar || ["standart", "premium"]).includes(t.k) ? "✓ Avto-SMS — o‘z SIM kartangizdan" : "— Avto-SMS yo‘q"}</span>
       ${sigmaydi ? `<span class="t-ogoh">Sizda ${faolSon} ta faol ${T.oquvchi} bor</span>` : ""}</button>`;
   }).join("");
   const kutish = L.kutilayotgan > 0 ? `<div class="info-quti"><span class="matn"><b>To‘lov tekshirilmoqda.</b> To‘lagan bo‘lsangiz, bir necha daqiqada obuna o‘zi yangilanadi.</span>
