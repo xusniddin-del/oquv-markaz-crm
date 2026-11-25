@@ -19,7 +19,7 @@ Kichik va o‘rta o‘quv markazlari uchun boshqaruv tizimi: o‘quvchilar, guru
 
 | Fayl | Vazifasi |
 |---|---|
-| `src/*.js`, `src/*.css` | Manba kod (bo‘limlar bo‘yicha); `src/10-sinx.js` — bulutda saqlash va sinxronlash |
+| `src/*.js`, `src/*.css` | Manba kod (bo‘limlar bo‘yicha); `src/10-sinx.js` — bulutda saqlash va sinxronlash; `src/11-avtosms.js` — Avto-SMS |
 | `build.py` | Manbani bitta faylga yig‘adi → `index.html` |
 | `index.html` | Saytning o‘zi (GitHub Pages shuni ko‘rsatadi) |
 | `admin/index.html` | Sotuvchining admin sayti: markazlar, bloklash, uzaytirish, xabar |

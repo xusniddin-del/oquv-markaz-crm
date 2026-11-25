@@ -263,3 +263,33 @@ pre.kod-blok { background: var(--surface-2); border: 1px solid var(--line); bord
 .parol-kod { font-family: ui-monospace, Consolas, monospace; font-size:18px; letter-spacing:.06em; user-select:all; }
 .chat-yoz { display:flex; gap:8px; }
 .chat-yoz input { flex:1; min-width:0; }
+
+/* ---------- Avto-SMS ---------- */
+.sms-qadam { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); }
+.sms-qadam:first-of-type { border-top: 0; }
+.sms-raqam { flex: 0 0 32px; height: 32px; border-radius: 50%; background: var(--primary-soft); color: var(--primary-ink); display: grid; place-items: center; font-weight: 700; }
+.sms-qadam > div { flex: 1; min-width: 0; }
+.sms-kod { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 44px; font-weight: 700; letter-spacing: 6px; color: var(--primary-ink);
+  background: var(--primary-soft); border-radius: 16px; padding: 14px 18px; text-align: center; font-variant-numeric: tabular-nums; }
+.sms-qr-qator { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.sms-qr-joy { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 8px; display: inline-flex; width: max-content; }
+.sms-qr { display: block; }
+.sms-xavfsiz summary { cursor: pointer; list-style: none; min-height: 32px; display: flex; align-items: center; }
+.sms-xavfsiz summary::-webkit-details-marker { display: none; }
+.sms-xavfsiz[open] summary { margin-bottom: 8px; }
+.sms-belgilar { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.sms-belgilar li { display: flex; gap: 8px; align-items: flex-start; }
+.sms-belgilar li .ic { color: var(--ok); flex: 0 0 auto; margin-top: 2px; }
+.sms-kun { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.sms-kun input { width: 16px; height: 16px; min-height: 0; accent-color: var(--primary); }
+.sms-rozi { align-items: flex-start; font-weight: 500; }
+.sms-rozi input { margin-top: 2px; flex: 0 0 auto; }
+.sms-yubor-btn { margin-bottom: 8px; white-space: normal; height: auto; min-height: 44px; line-height: 1.25; text-align: center; }
+.chiplar.sms-kunlar { flex-wrap: wrap; overflow: visible; }
+.sms-tarix .qator { align-items: flex-start; gap: 10px; padding: 10px 0; }
+.sms-tarix .q-ong { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: 0 0 auto; }
+.sms-tarix .q-sub { white-space: normal; overflow-wrap: anywhere; }
+.sms-yangi { border: 1px solid var(--ok); }
+.sms-qator { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.sms-vaqt { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.sms-vaqt select { min-width: 0; }

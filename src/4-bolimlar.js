@@ -177,7 +177,8 @@ function oquvchiProfil(id) {
     <div class="amal-qator">
       ${oq ? "" : `<button class="btn btn-primary btn-sm" data-act="tolovga" data-id="${o.id}">${icon("wallet", 18)} To‘lov</button>
       <button class="btn btn-soft btn-sm" data-act="azolik-yangi" data-id="${o.id}">${icon("plus", 18)} ${katta(T.guruh)}ga qo‘shish</button>
-      <button class="btn btn-ghost btn-sm" data-act="oq-tahrir" data-id="${o.id}">${icon("edit", 18)} Tahrirlash</button>`}
+      <button class="btn btn-ghost btn-sm" data-act="oq-tahrir" data-id="${o.id}">${icon("edit", 18)} Tahrirlash</button>
+      ${o.noAutoSms || (typeof smsTayyor === "function" && smsTayyor()) ? `<button class="btn btn-ghost btn-sm" data-act="sms-taqiq" data-id="${o.id}" aria-pressed="${!!o.noAutoSms}">${o.noAutoSms ? `${icon("check2", 18)} Avto-SMS yuborilmaydi` : `${icon("x", 18)} Avto-SMS yuborilmasin`}</button>` : ""}`}
     </div>
     <div class="bo-sar">${katta(T.guruhlar)}</div>
     ${azoliklar.length ? `<table class="mini-jadval"><tbody>${azoliklar.map(({ a, i, g }) => {
@@ -530,12 +531,13 @@ const QOLIPLAR = {
   tolov: ["ism", "summa", "sana", "usul", "balans", "markaz"],
   lid: ["ism", "kurs", "markaz"],
 };
-function xabarKarta(id, ism, tel, matn, izoh) {
+function xabarKarta(id, ism, tel, matn, izoh, pid = "") {
   return `<article class="card xabar-k">
     <div class="qk-top"><span class="avatar">${esc(boshHarf(ism))}</span><div class="q-mat"><div class="q-nom">${esc(ism)}</div><div class="q-sub">${izoh}</div></div></div>
     <div class="tel">Telefon: <b>${esc(tel || "kiritilmagan")}</b></div>
     <label class="vh" for="xm-${id}">Xabar matni</label>
     <textarea id="xm-${id}" data-xabar="${id}" rows="4">${esc(matn)}</textarea>
+    ${typeof smsTayyor === "function" && smsTayyor() && tel ? `<button class="btn btn-primary btn-blok sms-yubor-btn" data-act="sms-yubor" data-target="xm-${id}" data-tel="${esc(tel)}" data-pid="${esc(pid)}">${icon("phone", 18)} Avtomatik yuborish (telefon orqali)</button>` : ""}
     <div class="xk-amal">
       <button class="btn btn-ghost" data-act="nusxa" data-target="xm-${id}">${icon("copy", 18)} Nusxalash</button>
       <a class="btn btn-primary" id="tg-${id}" href="${esc(tgHavola(matn))}" target="_blank" rel="noopener">${icon("send", 18)} Telegram</a>
@@ -552,7 +554,7 @@ function renderXabarlar() {
     if (!l.length) return html + boshHolat({ ic: "check2", sarlavha: "Qarzdorlar yo‘q", matn: "Eslatma yuboradigan hech kim yo‘q." });
     return html + `<div class="kartalar">${l.map(x => xabarKarta(`q-${x.o.id}`, x.o.ism, x.o.otaTel || x.o.tel,
       shablonTold("qarz", { ism: x.o.ism, summa: pul(x.h.qarz, " "), davr: davrMatni(x.h), guruh: oquvchiGuruhlari(x.o).map(g => g.nomi).join(", "), markaz }),
-      `Qarz <b class="qizil">${pulS(x.h.qarz)}</b> · ${davrMatni(x.h)}`)).join("")}</div>`;
+      `Qarz <b class="qizil">${pulS(x.h.qarz)}</b> · ${davrMatni(x.h)}`, x.o.id)).join("")}</div>`;
   }
   if (UI.xabarTur === "kelmadi") {
     const s = UI.xabarSana, yoz = [];
@@ -569,13 +571,13 @@ function renderXabarlar() {
     }
     return html + `<div class="kartalar">${yoz.map(({ o, g }) => xabarKarta(`k-${o.id}-${g.id}`, o.ism, o.otaTel || o.tel,
       shablonTold("kelmadi", { ism: o.ism, sana: sanaMatn(s), guruh: g.nomi, oqituvchi: oqituvchiNomi(g), markaz }),
-      `${esc(g.nomi)} · <span class="qizil">kelmadi</span>`)).join("")}</div>`;
+      `${esc(g.nomi)} · <span class="qizil">kelmadi</span>`, o.id)).join("")}</div>`;
   }
   if (UI.xabarTur === "lid") {
     const l = LD().filter(x => !["yozildi", "rad"].includes(x.holat) && x.keyingiAloqa && x.keyingiAloqa <= b);
     if (!l.length) return html + boshHolat({ ic: "funnel", sarlavha: "Bugun yoziladigan lid yo‘q", matn: "«Keyingi bog‘lanish» sanasi bugun yoki o‘tgan lidlar shu yerda chiqadi." });
     return html + `<div class="kartalar">${l.map(x => xabarKarta(`l-${x.id}`, x.ism, x.tel,
-      shablonTold("lid", { ism: x.ism, kurs: x.qiziqish || "kurslarimiz", markaz }), `${esc(x.qiziqish || "")} · ${esc((LID_HOLAT.find(h => h.k === x.holat) || {}).n || "")}`)).join("")}</div>`;
+      shablonTold("lid", { ism: x.ism, kurs: x.qiziqish || "kurslarimiz", markaz }), `${esc(x.qiziqish || "")} · ${esc((LID_HOLAT.find(h => h.k === x.holat) || {}).n || "")}`, "lid:" + x.id)).join("")}</div>`;
   }
   const nomlar = { qarz: "Qarz eslatmasi", kelmadi: "Kelmaganlik haqida", tolov: "To‘lov cheki", lid: "Lidga taklif" };
   return html + `<div class="ikki-ustun">${Object.keys(QOLIPLAR).map(tur => `<section class="card"><div class="card-h"><h2>${nomlar[tur]}</h2></div>
